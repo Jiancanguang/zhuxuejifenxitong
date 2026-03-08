@@ -1,0 +1,19 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      DATABASE_SSL: "${DATABASE_SSL:-true}"
+      BACKUP_DIR: /app/backups
+    ports:
+      - "${PORT:-3001}:${PORT:-3001}"
+    volumes:
+      - class-pet-garden-backups:/app/backups
+
+volumes:
+  class-pet-garden-backups:

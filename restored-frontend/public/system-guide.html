@@ -487,14 +487,19 @@
     <main class="shell">
       <section class="page cover" id="cover">
         <div>
-          <div class="eyebrow">班级宠物园 · 独立部署版 · 系统说明</div>
+          <div class="eyebrow">祈福筑学工作室 · 班级宠物园 · 独立部署版</div>
           <h1 class="cover-title">班级宠物园系统说明</h1>
           <p class="cover-subtitle">
             本说明适用于当前工作室内部部署版本。该版本已取消激活码、卡密与外部购买流程，
-            采用前台注册 + 管理员后台管理的账号体系。若后续更换自定义域名，以管理员通知地址为准。
+            采用前台注册 + 管理员后台管理的账号体系。当前由祈福筑学工作室维护，
+            暂未绑定自定义域名，现阶段以系统访问地址为准。
           </p>
 
           <div class="summary-grid">
+            <div class="card">
+              <strong>维护方</strong>
+              <p>祈福筑学工作室</p>
+            </div>
             <div class="card">
               <strong>前台地址</strong>
               <p>https://zhuxuejifenxitong.vercel.app</p>
@@ -504,12 +509,16 @@
               <p>https://zhuxuejifenxitong.vercel.app/admin/login</p>
             </div>
             <div class="card">
+              <strong>文档版本</strong>
+              <p>v1.3.8 · 更新于 2026-03-09</p>
+            </div>
+            <div class="card">
               <strong>适用对象</strong>
               <p>班主任、任课老师、工作室运营管理员</p>
             </div>
             <div class="card">
-              <strong>文档版本</strong>
-              <p>v1.3.8 · 更新于 2026-03-09</p>
+              <strong>自定义域名</strong>
+              <p>暂未绑定，当前使用系统访问地址</p>
             </div>
           </div>
 
@@ -561,7 +570,7 @@
             </div>
           </div>
           <div class="footer-meta" style="margin-top: 28px;">
-            <span>说明：本文件为当前部署版系统文档，不依赖旧版激活流程。</span>
+            <span>说明：本文件为祈福筑学工作室当前部署版系统文档，不依赖旧版激活流程。</span>
             <span>导出文件名：班级宠物园系统说明.pdf</span>
           </div>
         </div>
@@ -817,6 +826,10 @@
               <td>前台域名后追加 <strong>/admin/login</strong>。当前地址：<strong>https://zhuxuejifenxitong.vercel.app/admin/login</strong></td>
             </tr>
             <tr>
+              <th>维护工作室</th>
+              <td>当前系统由 <strong>祈福筑学工作室</strong> 维护。后台账号仅供工作室管理员使用。</td>
+            </tr>
+            <tr>
               <th>后台功能</th>
               <td>查看系统统计、搜索用户、查看班级与学生数量、禁用/启用账号、重置密码、删除用户。</td>
             </tr>
@@ -888,13 +901,14 @@
             <div class="step-index">Q5</div>
             <div>
               <h3>可以绑定自己的域名吗？</h3>
-              <p>可以。前台域名绑定在 Vercel，若改成自定义域名，记得同步更新后端 Render 的 <strong>CORS_ORIGIN</strong> 配置。</p>
+              <p>可以。当前尚未绑定自定义域名，现阶段使用系统默认访问地址。后续若接入自定义域名，记得同步更新后端 Render 的 <strong>CORS_ORIGIN</strong> 配置。</p>
             </div>
           </article>
         </div>
 
         <div class="footer-meta" style="margin-top: 28px;">
           <span>文档名称：班级宠物园系统说明</span>
+          <span>维护方：祈福筑学工作室</span>
           <span>适用版本：v1.3.8 独立部署版</span>
           <span>生成日期：2026-03-09</span>
         </div>

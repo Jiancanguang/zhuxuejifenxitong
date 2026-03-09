@@ -7,159 +7,897 @@
     <style>
       :root {
         color-scheme: light;
-        --bg-start: #f7ecf8;
-        --bg-end: #e8eefb;
-        --card-bg: rgba(255, 255, 255, 0.88);
-        --card-border: rgba(255, 255, 255, 0.7);
-        --text-main: #1e293b;
-        --text-subtle: #64748b;
-        --accent-start: #ec4899;
-        --accent-end: #f97316;
+        --bg-a: #f8edf6;
+        --bg-b: #e9effc;
+        --ink: #1e293b;
+        --muted: #64748b;
+        --line: #dbe4f1;
+        --card: rgba(255, 255, 255, 0.92);
+        --pink: #ec4899;
+        --rose: #f43f5e;
+        --amber: #f59e0b;
+        --indigo: #4f46e5;
+        --emerald: #10b981;
+      }
+
+      @page {
+        size: A4;
+        margin: 14mm;
       }
 
       * {
         box-sizing: border-box;
       }
 
+      html {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
       body {
         margin: 0;
-        min-height: 100vh;
         font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
-        color: var(--text-main);
-        background: linear-gradient(135deg, var(--bg-start), var(--bg-end));
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, rgba(236, 72, 153, 0.16), transparent 26%),
+          radial-gradient(circle at top right, rgba(79, 70, 229, 0.14), transparent 24%),
+          linear-gradient(135deg, var(--bg-a), var(--bg-b));
       }
 
-      .shell {
-        width: min(1200px, calc(100vw - 32px));
-        margin: 24px auto;
-        padding: 24px;
-        border-radius: 28px;
-        background: var(--card-bg);
-        border: 1px solid var(--card-border);
-        box-shadow: 0 24px 60px rgba(148, 163, 184, 0.22);
+      .screen-nav {
+        position: sticky;
+        top: 0;
+        z-index: 20;
         backdrop-filter: blur(18px);
+        background: rgba(248, 237, 246, 0.76);
+        border-bottom: 1px solid rgba(219, 228, 241, 0.8);
       }
 
-      .header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 16px;
-        margin-bottom: 20px;
-      }
-
-      .title {
-        margin: 0;
-        font-size: clamp(28px, 4vw, 40px);
-        line-height: 1.1;
-      }
-
-      .subtitle {
-        margin: 10px 0 0;
-        color: var(--text-subtle);
-        font-size: 15px;
-        line-height: 1.6;
-      }
-
-      .actions {
+      .screen-nav__inner {
+        width: min(1120px, calc(100vw - 32px));
+        margin: 0 auto;
+        padding: 14px 0;
         display: flex;
         flex-wrap: wrap;
-        gap: 12px;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
       }
 
+      .screen-nav__links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .pill,
       .button {
         display: inline-flex;
         align-items: center;
         justify-content: center;
         gap: 8px;
-        min-height: 46px;
-        padding: 0 18px;
+        min-height: 40px;
+        padding: 0 14px;
         border-radius: 999px;
-        border: 0;
         text-decoration: none;
+        font-size: 14px;
         font-weight: 700;
         transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
       }
 
-      .button:hover {
-        transform: translateY(-1px);
+      .pill {
+        color: var(--ink);
+        background: rgba(255, 255, 255, 0.78);
+        border: 1px solid rgba(219, 228, 241, 0.9);
+      }
+
+      .button {
+        border: 0;
       }
 
       .button-primary {
         color: #fff;
-        background: linear-gradient(90deg, var(--accent-start), var(--accent-end));
-        box-shadow: 0 14px 30px rgba(236, 72, 153, 0.28);
+        background: linear-gradient(90deg, var(--pink), #fb7185);
+        box-shadow: 0 16px 32px rgba(236, 72, 153, 0.24);
       }
 
       .button-secondary {
-        color: var(--text-main);
-        background: rgba(255, 255, 255, 0.9);
-        border: 1px solid rgba(203, 213, 225, 0.9);
+        color: var(--ink);
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid rgba(219, 228, 241, 0.9);
       }
 
-      .viewer {
-        width: 100%;
-        height: calc(100vh - 210px);
-        min-height: 640px;
-        border: 1px solid rgba(226, 232, 240, 0.9);
-        border-radius: 20px;
+      .button:hover,
+      .pill:hover {
+        transform: translateY(-1px);
+      }
+
+      .shell {
+        width: min(1120px, calc(100vw - 32px));
+        margin: 20px auto 36px;
+      }
+
+      .page {
+        position: relative;
+        margin-bottom: 20px;
+        padding: 28px;
+        border-radius: 28px;
+        background: var(--card);
+        border: 1px solid rgba(255, 255, 255, 0.86);
+        box-shadow: 0 22px 60px rgba(148, 163, 184, 0.18);
         overflow: hidden;
-        background: #fff;
+        break-after: page;
       }
 
-      .viewer iframe {
+      .page:last-child {
+        break-after: auto;
+      }
+
+      .page::before {
+        content: "";
+        position: absolute;
+        inset: 0 0 auto;
+        height: 6px;
+        background: linear-gradient(90deg, var(--pink), var(--amber), var(--indigo));
+      }
+
+      .cover {
+        min-height: 1020px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(219, 228, 241, 0.92);
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      h1,
+      h2,
+      h3,
+      p,
+      ul,
+      ol {
+        margin: 0;
+      }
+
+      .cover-title {
+        max-width: 760px;
+        font-size: 62px;
+        line-height: 1.05;
+        letter-spacing: -0.04em;
+      }
+
+      .cover-subtitle {
+        max-width: 760px;
+        margin-top: 18px;
+        color: var(--muted);
+        font-size: 19px;
+        line-height: 1.8;
+      }
+
+      .summary-grid,
+      .grid-2,
+      .grid-3 {
+        display: grid;
+        gap: 16px;
+      }
+
+      .summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        margin-top: 28px;
+      }
+
+      .grid-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .grid-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .card {
+        padding: 18px 20px;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(226, 232, 240, 0.96);
+      }
+
+      .card strong,
+      .feature-card strong {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 15px;
+      }
+
+      .card p,
+      .feature-card p,
+      .note,
+      .muted,
+      li {
+        color: var(--muted);
+        line-height: 1.75;
+      }
+
+      .feature-card {
+        padding: 18px;
+        border-radius: 22px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(249, 250, 251, 0.96));
+        border: 1px solid rgba(226, 232, 240, 0.98);
+      }
+
+      .section-head {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+
+      .section-title {
+        font-size: 34px;
+        line-height: 1.15;
+      }
+
+      .section-subtitle {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.75;
+      }
+
+      .steps {
+        display: grid;
+        gap: 14px;
+      }
+
+      .step {
+        display: grid;
+        grid-template-columns: 56px minmax(0, 1fr);
+        gap: 16px;
+        padding: 18px;
+        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid rgba(226, 232, 240, 0.96);
+      }
+
+      .step-index {
+        width: 56px;
+        height: 56px;
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, var(--pink), var(--rose));
+        color: #fff;
+        font-size: 24px;
+        font-weight: 800;
+      }
+
+      .step h3 {
+        font-size: 18px;
+        margin-bottom: 8px;
+      }
+
+      .list {
+        padding-left: 20px;
+      }
+
+      .table {
         width: 100%;
-        height: 100%;
-        border: 0;
+        border-collapse: collapse;
+        overflow: hidden;
+        border-radius: 20px;
+        border: 1px solid rgba(226, 232, 240, 0.96);
+      }
+
+      .table th,
+      .table td {
+        padding: 14px 16px;
+        border-bottom: 1px solid rgba(226, 232, 240, 0.96);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      .table th {
+        width: 28%;
+        background: rgba(248, 250, 252, 0.88);
+        font-size: 14px;
+      }
+
+      .table td {
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .table tr:last-child th,
+      .table tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .note-block,
+      .warning-block {
+        padding: 18px 20px;
+        border-radius: 22px;
+        margin-top: 16px;
+      }
+
+      .note-block {
+        background: rgba(239, 246, 255, 0.92);
+        border: 1px solid rgba(147, 197, 253, 0.34);
+      }
+
+      .warning-block {
+        background: rgba(255, 247, 237, 0.96);
+        border: 1px solid rgba(251, 191, 36, 0.36);
+      }
+
+      .footer-meta {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 18px;
+      }
+
+      .kpi {
+        padding: 18px;
+        border-radius: 22px;
+        background: linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(252, 231, 243, 0.78));
+        border: 1px solid rgba(244, 114, 182, 0.14);
+      }
+
+      .kpi__value {
+        display: block;
+        margin-top: 8px;
+        font-size: 26px;
+        font-weight: 800;
+        color: var(--ink);
+      }
+
+      .toc {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px 18px;
+        margin-top: 18px;
+      }
+
+      .toc-item {
+        padding: 14px 16px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid rgba(226, 232, 240, 0.96);
+      }
+
+      .toc-item strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .small {
+        font-size: 13px;
       }
 
       @media (max-width: 900px) {
+        .screen-nav__inner,
         .shell {
           width: calc(100vw - 20px);
-          margin: 10px auto;
-          padding: 18px;
-          border-radius: 22px;
         }
 
-        .header {
-          flex-direction: column;
+        .page {
+          padding: 22px 18px;
+          border-radius: 24px;
         }
 
-        .actions {
+        .summary-grid,
+        .grid-2,
+        .grid-3,
+        .kpi-grid,
+        .toc {
+          grid-template-columns: 1fr;
+        }
+
+        .cover-title {
+          font-size: 40px;
+        }
+
+        .section-title {
+          font-size: 28px;
+        }
+
+        .table th,
+        .table td {
+          display: block;
           width: 100%;
         }
 
-        .actions .button {
-          flex: 1 1 100%;
+        .table th {
+          border-bottom: 0;
+          padding-bottom: 8px;
         }
 
-        .viewer {
-          height: calc(100vh - 280px);
-          min-height: 520px;
+        .table td {
+          padding-top: 0;
+        }
+      }
+
+      @media print {
+        body {
+          background: #fff;
+        }
+
+        .screen-nav {
+          display: none;
+        }
+
+        .shell {
+          width: auto;
+          margin: 0;
+        }
+
+        .page {
+          margin: 0;
+          border-radius: 0;
+          box-shadow: none;
+          border: 0;
+          background: #fff;
+          padding: 0;
+        }
+
+        .page::before {
+          height: 5px;
         }
       }
     </style>
   </head>
   <body>
-    <main class="shell">
-      <section class="header">
-        <div>
-          <h1 class="title">班级宠物园系统说明</h1>
-          <p class="subtitle">
-            这里展示系统使用文档。可直接在线查看，也可下载 PDF 留存。
-          </p>
+    <nav class="screen-nav">
+      <div class="screen-nav__inner">
+        <div class="screen-nav__links">
+          <a class="pill" href="#cover">封面</a>
+          <a class="pill" href="#quick-start">快速开始</a>
+          <a class="pill" href="#daily">日常操作</a>
+          <a class="pill" href="#admin">后台管理</a>
+          <a class="pill" href="#faq">常见问题</a>
         </div>
-        <div class="actions">
-          <a class="button button-primary" href="/system-guide.pdf" target="_blank" rel="noreferrer">
-            在线打开 PDF
-          </a>
-          <a class="button button-secondary" href="/system-guide.pdf" download="班级宠物园系统说明.pdf">
-            下载系统说明
-          </a>
+        <div class="screen-nav__links">
+          <a class="button button-primary" href="/system-guide.pdf" download="班级宠物园系统说明.pdf">下载 PDF</a>
+          <a class="button button-secondary" href="https://zhuxuejifenxitong.vercel.app" target="_blank" rel="noreferrer">打开系统</a>
+        </div>
+      </div>
+    </nav>
+
+    <main class="shell">
+      <section class="page cover" id="cover">
+        <div>
+          <div class="eyebrow">班级宠物园 · 独立部署版 · 系统说明</div>
+          <h1 class="cover-title">班级宠物园系统说明</h1>
+          <p class="cover-subtitle">
+            本说明适用于当前工作室内部部署版本。该版本已取消激活码、卡密与外部购买流程，
+            采用前台注册 + 管理员后台管理的账号体系。若后续更换自定义域名，以管理员通知地址为准。
+          </p>
+
+          <div class="summary-grid">
+            <div class="card">
+              <strong>前台地址</strong>
+              <p>https://zhuxuejifenxitong.vercel.app</p>
+            </div>
+            <div class="card">
+              <strong>后台地址</strong>
+              <p>https://zhuxuejifenxitong.vercel.app/admin/login</p>
+            </div>
+            <div class="card">
+              <strong>适用对象</strong>
+              <p>班主任、任课老师、工作室运营管理员</p>
+            </div>
+            <div class="card">
+              <strong>文档版本</strong>
+              <p>v1.3.8 · 更新于 2026-03-09</p>
+            </div>
+          </div>
+
+          <div class="kpi-grid">
+            <div class="kpi">
+              <div class="small">账号体系</div>
+              <span class="kpi__value">注册即用</span>
+            </div>
+            <div class="kpi">
+              <div class="small">数据能力</div>
+              <span class="kpi__value">多班级</span>
+            </div>
+            <div class="kpi">
+              <div class="small">教学玩法</div>
+              <span class="kpi__value">宠物养成</span>
+            </div>
+            <div class="kpi">
+              <div class="small">管理方式</div>
+              <span class="kpi__value">后台集中管控</span>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="toc">
+            <div class="toc-item">
+              <strong>01 快速开始</strong>
+              <p class="small">注册、登录、首次打开说明</p>
+            </div>
+            <div class="toc-item">
+              <strong>02 系统设置与班级搭建</strong>
+              <p class="small">系统名称、班级名称、学生名单、积分规则</p>
+            </div>
+            <div class="toc-item">
+              <strong>03 日常教学操作</strong>
+              <p class="small">搜索、加分、扣分、批量喂养、撤回</p>
+            </div>
+            <div class="toc-item">
+              <strong>04 分组、徽章与奖励</strong>
+              <p class="small">随机分组、毕业、徽章墙、小卖部</p>
+            </div>
+            <div class="toc-item">
+              <strong>05 数据查看与导出</strong>
+              <p class="small">成长记录、光荣榜、证书与贴纸导出</p>
+            </div>
+            <div class="toc-item">
+              <strong>06 管理后台与常见问题</strong>
+              <p class="small">用户管理、重置密码、冷启动与异常处理</p>
+            </div>
+          </div>
+          <div class="footer-meta" style="margin-top: 28px;">
+            <span>说明：本文件为当前部署版系统文档，不依赖旧版激活流程。</span>
+            <span>导出文件名：班级宠物园系统说明.pdf</span>
+          </div>
         </div>
       </section>
-      <section class="viewer">
-        <iframe src="/system-guide.pdf#toolbar=1&navpanes=0&scrollbar=1" title="班级宠物园系统说明 PDF"></iframe>
+
+      <section class="page" id="quick-start">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title">01 快速开始</h2>
+            <p class="section-subtitle">
+              首次使用建议先注册老师账号，再进入系统完成基础设置。当前版本不需要输入激活码。
+            </p>
+          </div>
+        </div>
+
+        <div class="steps">
+          <article class="step">
+            <div class="step-index">1</div>
+            <div>
+              <h3>打开系统</h3>
+              <p>使用 Chrome、Edge 或 Safari 打开前台地址。若使用 Render 免费实例，首次访问可能需要等待 20-60 秒。</p>
+              <ul class="list">
+                <li>前台：<strong>https://zhuxuejifenxitong.vercel.app</strong></li>
+                <li>后台：<strong>https://zhuxuejifenxitong.vercel.app/admin/login</strong></li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="step">
+            <div class="step-index">2</div>
+            <div>
+              <h3>注册老师账号</h3>
+              <p>在登录页切换到“注册”，填写用户名和密码后提交。注册成功后会自动登录进入系统。</p>
+              <ul class="list">
+                <li>用户名至少 6 个字符</li>
+                <li>用户名只能包含字母、数字、下划线</li>
+                <li>密码至少 6 个字符</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="step">
+            <div class="step-index">3</div>
+            <div>
+              <h3>登录与退出</h3>
+              <p>已有账号可直接登录。退出登录可在设置面板中的“账号管理”区域操作。</p>
+              <ul class="list">
+                <li>忘记密码：联系管理员处理</li>
+                <li>修改密码：登录后进入“设置 → 账号管理 → 修改密码”</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="step">
+            <div class="step-index">4</div>
+            <div>
+              <h3>理解当前版本</h3>
+              <p>当前独立部署版已取消激活页、卡密校验和对外购买流程。前台注册后即可使用全部教学功能。</p>
+            </div>
+          </article>
+        </div>
+
+        <div class="note-block">
+          <strong>使用建议</strong>
+          <p>建议老师先在电脑端完成初始配置，再在课堂中使用大屏或投影进行日常积分与宠物展示。</p>
+        </div>
+      </section>
+
+      <section class="page">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title">02 系统设置与班级搭建</h2>
+            <p class="section-subtitle">
+              首次登录后，优先完成系统名称、班级名称、学生名单和积分规则配置。
+            </p>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="feature-card">
+            <strong>系统名称与班级名称</strong>
+            <p>进入“设置”后，可修改全局系统名称与当前班级名称。系统名称会影响整个界面的主标题，班级名称用于当前班级展示。</p>
+          </div>
+          <div class="feature-card">
+            <strong>保存设置</strong>
+            <p>所有修改最终都需要点击“保存设置”才会提交到服务器。页面支持草稿自动保存，异常关闭后可恢复。</p>
+          </div>
+          <div class="feature-card">
+            <strong>学生名单管理</strong>
+            <p>支持逐个添加、批量粘贴、编辑、删除、上下排序。单个学生姓名最大 50 字符，且不能与现有学生重名。</p>
+          </div>
+          <div class="feature-card">
+            <strong>积分规则</strong>
+            <p>可新增、编辑或删除加分项/扣分项。正数为加分，负数为扣分，分值不能为 0。</p>
+          </div>
+          <div class="feature-card">
+            <strong>成长阶段</strong>
+            <p>系统默认 10 个成长阶段。第 10 级阈值即毕业所需总食物数量，建议与教学节奏保持一致。</p>
+          </div>
+          <div class="feature-card">
+            <strong>界面主题与配置复用</strong>
+            <p>支持更换主题，也可把积分规则、小卖部商品、阶段配置从其他班级复用过来，减少重复配置。</p>
+          </div>
+        </div>
+
+        <div class="warning-block">
+          <strong>高风险操作</strong>
+          <p>
+            设置页中包含“重置班级进度”类操作。该操作会清空积分、宠物、徽章、成长记录与兑换记录，执行前必须确认班级数据可被覆盖。
+          </p>
+        </div>
+      </section>
+
+      <section class="page" id="daily">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title">03 日常教学操作</h2>
+            <p class="section-subtitle">
+              课堂使用频率最高的是搜索学生、单人操作、批量喂养和撤回。
+            </p>
+          </div>
+        </div>
+
+        <table class="table">
+          <tbody>
+            <tr>
+              <th>搜索学生</th>
+              <td>顶部搜索框支持按姓名模糊查找，可快速定位学生卡片。</td>
+            </tr>
+            <tr>
+              <th>单人加分/扣分</th>
+              <td>点击学生卡片，选择积分项后立即生效；如果当前只配置了一个项目，系统会直接执行该项操作。</td>
+            </tr>
+            <tr>
+              <th>批量模式</th>
+              <td>点击顶部“批量”进入批量选择状态，勾选多名学生后可统一执行加分、扣分、分组或导出。</td>
+            </tr>
+            <tr>
+              <th>撤回操作</th>
+              <td>支持通过提示条快捷撤回，也支持进入“撤回模式”对学生最后一次操作进行撤销。</td>
+            </tr>
+            <tr>
+              <th>成长记录</th>
+              <td>点击顶部云朵图标可查看成长记录，包含加分、扣分、毕业、兑换等历史数据，并支持导出 CSV。</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="grid-2" style="margin-top: 18px;">
+          <div class="note-block">
+            <strong>单人操作建议</strong>
+            <p>适合课堂即时反馈，例如作业表现、早读打卡、课堂纪律、值日完成度等。</p>
+          </div>
+          <div class="note-block">
+            <strong>批量操作建议</strong>
+            <p>适合集体性任务，例如全组加分、统一扣分、批量签到或周总结奖励。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="page">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title">04 宠物、分组、徽章与奖励</h2>
+            <p class="section-subtitle">
+              这是系统的核心教学玩法：学生积累食物成长、满级毕业、获得徽章，再用徽章兑换奖励。
+            </p>
+          </div>
+        </div>
+
+        <div class="steps">
+          <article class="step">
+            <div class="step-index">A</div>
+            <div>
+              <h3>领养宠物</h3>
+              <p>可以让学生单独选择宠物，也可以在设置页中一键为未领养学生随机分配宠物。</p>
+            </div>
+          </article>
+          <article class="step">
+            <div class="step-index">B</div>
+            <div>
+              <h3>分组管理</h3>
+              <p>支持创建分组、编辑名称、排序、随机分组与批量分配学生。分组筛选栏可按组查看和操作学生。</p>
+            </div>
+          </article>
+          <article class="step">
+            <div class="step-index">C</div>
+            <div>
+              <h3>毕业与徽章</h3>
+              <p>当学生达到 10 级阈值后即可毕业。毕业后会生成徽章，进度归零并回到重新养成状态。</p>
+            </div>
+          </article>
+          <article class="step">
+            <div class="step-index">D</div>
+            <div>
+              <h3>小卖部兑换</h3>
+              <p>老师可维护商品名称、价格、库存和描述。学生使用徽章兑换奖励，系统自动记录兑换历史。</p>
+            </div>
+          </article>
+        </div>
+
+        <div class="warning-block">
+          <strong>规则提醒</strong>
+          <p>已毕业学生会获得徽章，但宠物进度会重置。兑换商品会消耗徽章，请在发放实体奖励后再执行兑换操作。</p>
+        </div>
+      </section>
+
+      <section class="page">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title">05 数据查看与导出</h2>
+            <p class="section-subtitle">
+              系统除了课堂即时反馈，也提供排行、记录与批量导出能力，方便周总结和期末展示。
+            </p>
+          </div>
+        </div>
+
+        <div class="grid-3">
+          <div class="feature-card">
+            <strong>光荣榜</strong>
+            <p>可按食物数、徽章数等维度查看排名，适合班会展示、周评比和阶段总结。</p>
+          </div>
+          <div class="feature-card">
+            <strong>成长记录</strong>
+            <p>支持查看、筛选、清理和导出成长记录。记录满额时，系统会提醒先清理旧数据。</p>
+          </div>
+          <div class="feature-card">
+            <strong>证书/贴纸导出</strong>
+            <p>支持单人或批量导出证书、徽章贴纸与 ZIP 打包文件，适合打印和线下发放。</p>
+          </div>
+        </div>
+
+        <div class="note-block">
+          <strong>推荐用法</strong>
+          <p>每周固定导出一次成长记录和光荣榜截图，用于家校沟通或班级展示；学期末可统一导出徽章证书做总结奖励。</p>
+        </div>
+      </section>
+
+      <section class="page" id="admin">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title">06 管理后台说明</h2>
+            <p class="section-subtitle">
+              管理后台与老师前台账号分离。后台账号由部署环境单独配置，不通过前台注册。
+            </p>
+          </div>
+        </div>
+
+        <table class="table">
+          <tbody>
+            <tr>
+              <th>后台地址</th>
+              <td>前台域名后追加 <strong>/admin/login</strong>。当前地址：<strong>https://zhuxuejifenxitong.vercel.app/admin/login</strong></td>
+            </tr>
+            <tr>
+              <th>后台功能</th>
+              <td>查看系统统计、搜索用户、查看班级与学生数量、禁用/启用账号、重置密码、删除用户。</td>
+            </tr>
+            <tr>
+              <th>重置密码</th>
+              <td>管理员在后台为用户重置密码后，新密码默认为 <strong>123456</strong>。用户登录后建议立即修改。</td>
+            </tr>
+            <tr>
+              <th>禁用账号</th>
+              <td>被禁用账号将无法继续登录前台，适合处理停用、误注册或异常账号。</td>
+            </tr>
+            <tr>
+              <th>删除用户</th>
+              <td>删除用户会同时删除该用户的班级、学生和成长记录。执行前必须确认数据不再保留。</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="warning-block">
+          <strong>后台权限建议</strong>
+          <p>后台账号只交给工作室管理员使用。普通老师不应共享后台密码，以免误删用户或重置错误账号。</p>
+        </div>
+      </section>
+
+      <section class="page" id="faq">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title">07 常见问题</h2>
+            <p class="section-subtitle">
+              以下问题是独立部署版最常见的使用场景和排查方向。
+            </p>
+          </div>
+        </div>
+
+        <div class="steps">
+          <article class="step">
+            <div class="step-index">Q1</div>
+            <div>
+              <h3>为什么第一次打开有点慢？</h3>
+              <p>如果后端部署在 Render 免费实例，长时间无访问后会进入休眠。第一次访问时需要等待实例重新启动，通常为 20-60 秒。</p>
+            </div>
+          </article>
+
+          <article class="step">
+            <div class="step-index">Q2</div>
+            <div>
+              <h3>为什么没有激活码页面？</h3>
+              <p>当前版本已改为内部账号体系，取消了激活码和卡密校验。老师直接注册账号即可使用。</p>
+            </div>
+          </article>
+
+          <article class="step">
+            <div class="step-index">Q3</div>
+            <div>
+              <h3>老师忘记密码怎么办？</h3>
+              <p>前台不提供自助找回密码。请管理员进入后台重置，默认重置为 123456，再通知老师登录后修改密码。</p>
+            </div>
+          </article>
+
+          <article class="step">
+            <div class="step-index">Q4</div>
+            <div>
+              <h3>系统提示无法连接服务器怎么办？</h3>
+              <p>优先刷新一次页面，并确认后端服务是否已启动。免费实例冷启动完成后通常会恢复；若持续失败，再检查 Render 后端与 Vercel 前端的域名配置和 CORS 设置。</p>
+            </div>
+          </article>
+
+          <article class="step">
+            <div class="step-index">Q5</div>
+            <div>
+              <h3>可以绑定自己的域名吗？</h3>
+              <p>可以。前台域名绑定在 Vercel，若改成自定义域名，记得同步更新后端 Render 的 <strong>CORS_ORIGIN</strong> 配置。</p>
+            </div>
+          </article>
+        </div>
+
+        <div class="footer-meta" style="margin-top: 28px;">
+          <span>文档名称：班级宠物园系统说明</span>
+          <span>适用版本：v1.3.8 独立部署版</span>
+          <span>生成日期：2026-03-09</span>
+        </div>
       </section>
     </main>
   </body>

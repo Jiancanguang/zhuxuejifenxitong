@@ -14,6 +14,7 @@
     "db:migrate": "node ./scripts/migrate.mjs",
     "db:backup": "node ./scripts/backup-db.mjs",
     "mirror:images": "node ./scripts/mirror-pet-assets.mjs",
+    "build:guide": "node ./scripts/build-system-guide-pdf.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

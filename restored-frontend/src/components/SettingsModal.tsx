@@ -66,6 +66,7 @@ const MAX_SCORE_ITEM_NAME_LENGTH = 50;
 const MIN_SCORE = -999;
 const MAX_SCORE = 999;
 const DEFAULT_SCORE = 1;
+const SYSTEM_GUIDE_URL = '/system-guide.html';
 
 const normalizeScoreInputValue = (raw: string): number => {
   const parsed = parseInt(raw, 10);
@@ -1302,6 +1303,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                 {/* Action Buttons */}
                 <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    onClick={() => window.open(SYSTEM_GUIDE_URL, '_blank', 'noopener,noreferrer')}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-lg font-bold text-amber-700 hover:bg-amber-100 hover:border-amber-300 transition-all min-h-[44px]"
+                  >
+                    <FileText size={16} />
+                    系统说明
+                  </button>
                   <button
                     onClick={() => setShowChangePassword(true)}
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-lg font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all min-h-[44px]"

@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>班级宠物园系统说明</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg-start: #f7ecf8;
+        --bg-end: #e8eefb;
+        --card-bg: rgba(255, 255, 255, 0.88);
+        --card-border: rgba(255, 255, 255, 0.7);
+        --text-main: #1e293b;
+        --text-subtle: #64748b;
+        --accent-start: #ec4899;
+        --accent-end: #f97316;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+        color: var(--text-main);
+        background: linear-gradient(135deg, var(--bg-start), var(--bg-end));
+      }
+
+      .shell {
+        width: min(1200px, calc(100vw - 32px));
+        margin: 24px auto;
+        padding: 24px;
+        border-radius: 28px;
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        box-shadow: 0 24px 60px rgba(148, 163, 184, 0.22);
+        backdrop-filter: blur(18px);
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+
+      .title {
+        margin: 0;
+        font-size: clamp(28px, 4vw, 40px);
+        line-height: 1.1;
+      }
+
+      .subtitle {
+        margin: 10px 0 0;
+        color: var(--text-subtle);
+        font-size: 15px;
+        line-height: 1.6;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 46px;
+        padding: 0 18px;
+        border-radius: 999px;
+        border: 0;
+        text-decoration: none;
+        font-weight: 700;
+        transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+      }
+
+      .button:hover {
+        transform: translateY(-1px);
+      }
+
+      .button-primary {
+        color: #fff;
+        background: linear-gradient(90deg, var(--accent-start), var(--accent-end));
+        box-shadow: 0 14px 30px rgba(236, 72, 153, 0.28);
+      }
+
+      .button-secondary {
+        color: var(--text-main);
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(203, 213, 225, 0.9);
+      }
+
+      .viewer {
+        width: 100%;
+        height: calc(100vh - 210px);
+        min-height: 640px;
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        border-radius: 20px;
+        overflow: hidden;
+        background: #fff;
+      }
+
+      .viewer iframe {
+        width: 100%;
+        height: 100%;
+        border: 0;
+      }
+
+      @media (max-width: 900px) {
+        .shell {
+          width: calc(100vw - 20px);
+          margin: 10px auto;
+          padding: 18px;
+          border-radius: 22px;
+        }
+
+        .header {
+          flex-direction: column;
+        }
+
+        .actions {
+          width: 100%;
+        }
+
+        .actions .button {
+          flex: 1 1 100%;
+        }
+
+        .viewer {
+          height: calc(100vh - 280px);
+          min-height: 520px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="header">
+        <div>
+          <h1 class="title">班级宠物园系统说明</h1>
+          <p class="subtitle">
+            这里展示系统使用文档。可直接在线查看，也可下载 PDF 留存。
+          </p>
+        </div>
+        <div class="actions">
+          <a class="button button-primary" href="/system-guide.pdf" target="_blank" rel="noreferrer">
+            在线打开 PDF
+          </a>
+          <a class="button button-secondary" href="/system-guide.pdf" download="班级宠物园系统说明.pdf">
+            下载系统说明
+          </a>
+        </div>
+      </section>
+      <section class="viewer">
+        <iframe src="/system-guide.pdf#toolbar=1&navpanes=0&scrollbar=1" title="班级宠物园系统说明 PDF"></iframe>
+      </section>
+    </main>
+  </body>
+</html>

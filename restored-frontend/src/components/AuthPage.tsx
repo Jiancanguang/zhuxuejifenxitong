@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { User, KeyRound, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
+import { User, KeyRound, Eye, EyeOff, AlertCircle, Loader2, FileText } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 type TabType = 'login' | 'register';
+
+const SYSTEM_GUIDE_URL = '/system-guide.html';
 
 export function AuthPage() {
   const { login, register } = useAuth();
@@ -247,6 +249,18 @@ export function AuthPage() {
             {activeTab === 'login' ? '立即注册' : '立即登录'}
           </button>
         </p>
+
+        <div className="mt-4 flex justify-center">
+          <a
+            href={SYSTEM_GUIDE_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm font-bold text-slate-600 shadow-sm transition-colors hover:bg-white hover:text-slate-800"
+          >
+            <FileText size={16} />
+            系统说明
+          </a>
+        </div>
       </div>
 
     </div>

@@ -69,8 +69,8 @@ export function AuthPage() {
           <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full shadow-lg mb-4">
             <span className="text-4xl">🐱</span>
           </div>
-          <h1 className="text-3xl font-black text-slate-800">班级宠物园</h1>
-          <p className="text-slate-500 mt-2">让学习变得更有趣</p>
+          <h1 className="text-3xl font-black text-slate-800">祈福筑学工作室</h1>
+          <p className="text-slate-500 mt-2">学生积分系统</p>
         </div>
 
         {/* Auth Card */}

@@ -979,11 +979,20 @@ function MainApp() {
         rewardId,
       });
 
-      updateCurrentClass(prev => ({
-        inventory: result.inventory,
-        redemptions: result.redemptions,
-        history: [...prev.history, result.history],
-      }));
+      updateCurrentClass(prev => {
+        // 更新学生的 spentFood
+        const updatedStudents = prev.students.map(s =>
+          s.id === studentId
+            ? { ...s, spentFood: result.spentFood ?? ((s.spentFood || 0) + cost) }
+            : s
+        );
+        return {
+          inventory: result.inventory,
+          redemptions: result.redemptions,
+          history: [...prev.history, result.history],
+          students: updatedStudents,
+        };
+      });
 
       showUndoToast(
         null,
@@ -1094,10 +1103,7 @@ function MainApp() {
       return;
     }
 
-    if (record.type === 'redeem') {
-      showUndoToast(null, '⚠️ 商品兑换不支持撤回');
-      return;
-    }
+    // redeem 类型现在支持撤回（退还肉量）
 
     if (record.type === 'rename') {
       showUndoToast(null, '⚠️ 改名记录不支持撤回');
@@ -1141,6 +1147,12 @@ function MainApp() {
           }
           if (result.student.badges) {
             updates.badges = { ...prev.badges, [result.student.id]: result.student.badges };
+          }
+          // 同步 spentFood 到 students 数组
+          if (result.student.spentFood !== undefined) {
+            updates.students = prev.students.map(s =>
+              s.id === result.student!.id ? { ...s, spentFood: result.student!.spentFood } : s
+            );
           }
         }
 
@@ -1550,18 +1562,15 @@ function MainApp() {
       const prevPetSelection = currentClass.petSelections[studentId];
       const prevPetStage = currentClass.petStages?.[studentId] || calculateStageFromFood(prevProgress, currentClass.stageThresholds);
 
-      // 先更新本地状态（乐观更新）
+      // 先更新本地状态（乐观更新）- 保留 food_count，只重置宠物
       updateCurrentClass(prev => {
         const newPetSelections = { ...prev.petSelections };
         delete newPetSelections[studentId]; // 毕业后宠物归零变回蛋
 
-        const newPetStages = { ...prev.petStages };
-        delete newPetStages[studentId]; // 重置阶段，重新开始时会从1计算
-
         return {
           badges: { ...prev.badges, [studentId]: updatedBadges },
-          progress: { ...prev.progress, [studentId]: 0 },
-          petStages: newPetStages,
+          progress: prev.progress, // food_count 不再重置
+          petStages: { ...prev.petStages, [studentId]: 1 },
           petSelections: newPetSelections,
         };
       });
@@ -2131,13 +2140,15 @@ function MainApp() {
         }}
         onClose={() => setShowRecordLimitWarning(false)}
       />
-      <StoreModal isOpen={isStoreOpen} onClose={() => setIsStoreOpen(false)} rewards={currentClass.rewards} inventory={currentClass.inventory} students={currentClass.students} badges={currentClass.badges} history={currentClass.history} onRedeem={handleRedeemReward} onRestock={handleRestock} onSaveReward={handleSaveReward} onDeleteReward={handleDeleteReward} />
+      <StoreModal isOpen={isStoreOpen} onClose={() => setIsStoreOpen(false)} rewards={currentClass.rewards} inventory={currentClass.inventory} students={currentClass.students.map(s => ({ ...s, foodCount: currentClass.progress[s.id] ?? s.foodCount ?? 0 }))} badges={currentClass.badges} history={currentClass.history} onRedeem={handleRedeemReward} onRestock={handleRestock} onSaveReward={handleSaveReward} onDeleteReward={handleDeleteReward} />
       <BadgeWallModal
         isOpen={!!badgeWallStudent}
         onClose={() => setBadgeWallStudent(null)}
         studentName={currentClass.students.find(s => s.id === badgeWallStudent)?.name || ''}
         badges={badgeWallStudent ? (currentClass.badges[badgeWallStudent] || []) : []}
         redemptions={currentClass.history.filter(h => h.studentId === badgeWallStudent && h.type === 'redeem')}
+        foodCount={badgeWallStudent ? (currentClass.progress[badgeWallStudent] ?? currentClass.students.find(s => s.id === badgeWallStudent)?.foodCount ?? 0) : 0}
+        spentFood={badgeWallStudent ? (currentClass.students.find(s => s.id === badgeWallStudent)?.spentFood ?? 0) : 0}
         onExportCertificate={() => handleOpenSingleExport('certificate')}
         onExportSticker={() => handleOpenSingleExport('sticker')}
       />

@@ -135,6 +135,14 @@ const migrations = [
       `);
     },
   },
+  {
+    id: '002_add_spent_food',
+    up: async (db) => {
+      await db.query(`
+        ALTER TABLE students ADD COLUMN spent_food INTEGER NOT NULL DEFAULT 0;
+      `);
+    },
+  },
 ];
 
 const ensureMigrationsTable = async (db) => {

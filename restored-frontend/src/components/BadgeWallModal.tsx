@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { X, Award, ShoppingBag, Sparkles, TrendingUp } from 'lucide-react';
+import { X, Award, ShoppingBag, TrendingUp } from 'lucide-react';
 import { Badge, HistoryRecord } from '../types';
 import { getPetById, getPetImagePath } from '../constants';
 
@@ -9,6 +9,8 @@ interface BadgeWallModalProps {
   studentName: string;
   badges: Badge[];
   redemptions: HistoryRecord[];
+  foodCount?: number;
+  spentFood?: number;
   onExportCertificate?: () => void;
   onExportSticker?: () => void;
 }
@@ -19,15 +21,17 @@ export const BadgeWallModal: React.FC<BadgeWallModalProps> = ({
   studentName,
   badges,
   redemptions,
+  foodCount = 0,
+  spentFood = 0,
   onExportCertificate,
   onExportSticker,
 }) => {
   const stats = useMemo(() => {
-    const totalEarned = badges.length;
-    const consumed = redemptions.reduce((sum, r) => sum + (r.cost || 0), 0);
-    const remaining = totalEarned - consumed;
-    return { totalEarned, consumed, remaining: Math.max(0, remaining) };
-  }, [badges, redemptions]);
+    const totalEarned = foodCount;
+    const consumed = spentFood;
+    const remaining = Math.max(0, totalEarned - consumed);
+    return { totalEarned, consumed, remaining };
+  }, [foodCount, spentFood]);
 
   const sortedRedemptions = useMemo(
     () => [...redemptions].sort((a, b) => b.timestamp - a.timestamp),
@@ -84,8 +88,8 @@ export const BadgeWallModal: React.FC<BadgeWallModalProps> = ({
         <div className="p-6 bg-gradient-to-b from-amber-50 to-white">
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-amber-100 text-center">
-              <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-amber-100 flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-amber-500" />
+              <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-amber-100 flex items-center justify-center text-2xl">
+                🍖
               </div>
               <div className="text-3xl font-black text-amber-600">{stats.totalEarned}</div>
               <div className="text-xs font-bold text-slate-400 mt-1">累计获得</div>
@@ -102,7 +106,7 @@ export const BadgeWallModal: React.FC<BadgeWallModalProps> = ({
                 <TrendingUp className="w-6 h-6 text-emerald-500" />
               </div>
               <div className="text-3xl font-black text-emerald-600">{stats.remaining}</div>
-              <div className="text-xs font-bold text-slate-400 mt-1">可用余额</div>
+              <div className="text-xs font-bold text-slate-400 mt-1">可兑换</div>
             </div>
           </div>
         </div>
@@ -188,7 +192,7 @@ export const BadgeWallModal: React.FC<BadgeWallModalProps> = ({
                       </div>
                     </div>
                     <div className="flex items-center gap-1 text-rose-500 font-black">
-                      <Award size={14} />
+                      <span>🍖</span>
                       <span>-{record.cost || 0}</span>
                     </div>
                   </div>
@@ -222,7 +226,7 @@ export const BadgeWallModal: React.FC<BadgeWallModalProps> = ({
           )}
           <div className="text-center">
           <p className="text-sm text-slate-400">
-            继续努力，收集更多徽章吧！
+            继续努力，获取更多肉来兑换奖品吧！
           </p>
           </div>
         </div>

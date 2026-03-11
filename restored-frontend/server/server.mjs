@@ -275,13 +275,13 @@ const selectStudentContextOwnedStmt = db.prepare(`
 const insertStudentStmt = db.prepare(`
   INSERT INTO students (
     id, class_id, name, sort_order, group_id, pet_id, pet_stage,
-    food_count, pet_nickname, created_at, updated_at
-  ) VALUES (?, ?, ?, ?, NULL, NULL, 1, 0, NULL, ?, ?)
+    food_count, pet_nickname, spent_food, created_at, updated_at
+  ) VALUES (?, ?, ?, ?, NULL, NULL, 1, 0, NULL, 0, ?, ?)
 `);
 const updateStudentCoreStmt = db.prepare(`
   UPDATE students
   SET name = ?, sort_order = ?, group_id = ?, pet_id = ?, pet_stage = ?,
-      food_count = ?, pet_nickname = ?, updated_at = ?
+      food_count = ?, pet_nickname = ?, spent_food = ?, updated_at = ?
   WHERE id = ?
 `);
 const updateStudentNameHistoryStmt = db.prepare(`
@@ -310,7 +310,7 @@ const batchAssignGroupStmt = db.prepare(`
 `);
 const resetStudentsProgressStmt = db.prepare(`
   UPDATE students
-  SET pet_id = NULL, pet_stage = 1, food_count = 0, pet_nickname = NULL, updated_at = ?
+  SET pet_id = NULL, pet_stage = 1, food_count = 0, pet_nickname = NULL, spent_food = 0, updated_at = ?
   WHERE class_id = ?
 `);
 
@@ -464,6 +464,7 @@ const mapStudent = (row, badges = []) => ({
   petId: row.pet_id || undefined,
   petStage: row.pet_stage,
   foodCount: row.food_count,
+  spentFood: row.spent_food || 0,
   sortOrder: row.sort_order,
   badges,
 });
@@ -765,6 +766,10 @@ const updateStudentRowTx = async (studentRow, classRow, patch) => {
     ? (patch.petNickname ? String(patch.petNickname).trim() : null)
     : (studentRow.pet_nickname || null);
 
+  const nextSpentFood = patch.spentFood !== undefined
+    ? Math.max(0, Number.parseInt(patch.spentFood, 10) || 0)
+    : (studentRow.spent_food || 0);
+
   const updatedAt = nowIso();
   await updateStudentCoreStmt.run(
     nextName,
@@ -774,6 +779,7 @@ const updateStudentRowTx = async (studentRow, classRow, patch) => {
     nextPetStage,
     nextFoodCount,
     nextPetNickname,
+    nextSpentFood,
     updatedAt,
     studentRow.id
   );
@@ -825,10 +831,10 @@ const assignRandomGroupsTx = async (classRow, groupCount) => {
   return { groups, assignments };
 };
 
-const getAvailableBadgeBalance = async (classId, studentId) => {
-  const badgeRow = await countBadgesByStudentStmt.get(classId, studentId);
-  const redeemRow = await countRedeemCostByStudentStmt.get(classId, studentId);
-  return (badgeRow?.total || 0) - (redeemRow?.totalCost || 0);
+const getAvailableFoodBalance = async (studentId) => {
+  const studentRow = await selectStudentContextOwnedStmt.get(studentId);
+  if (!studentRow) return 0;
+  return Math.max(0, (studentRow.food_count || 0) - (studentRow.spent_food || 0));
 };
 
 const selectStudentBadges = async (studentId) => {
@@ -851,6 +857,7 @@ const revokeSingleHistoryTx = async (historyRow, classRow) => {
   let nextPetStage = studentRow.pet_stage;
   let nextPetId = studentRow.pet_id || null;
   let nextPetNickname = studentRow.pet_nickname || null;
+  let nextSpentFood = studentRow.spent_food || 0;
   let nextBadges = await selectStudentBadges(studentRow.id);
 
   if (historyRow.type === 'checkin') {
@@ -858,14 +865,17 @@ const revokeSingleHistoryTx = async (historyRow, classRow) => {
     nextPetStage = calculateStageFromFood(nextFoodCount, thresholds);
   } else if (historyRow.type === 'graduate') {
     const meta = parseJson(historyRow.meta, {});
-    nextFoodCount = Math.max(0, Number(meta.previousFoodCount) || 0);
-    nextPetStage = Math.max(1, Number(meta.previousPetStage) || calculateStageFromFood(nextFoodCount, thresholds));
+    // 毕业撤回：恢复宠物状态，但不恢复 food_count（因为 food_count 不再在毕业时重置）
     nextPetId = meta.previousPetId || null;
     nextPetNickname = meta.previousPetNickname || null;
+    nextPetStage = Math.max(1, Number(meta.previousPetStage) || calculateStageFromFood(nextFoodCount, thresholds));
     if (historyRow.badge_id) {
       await deleteBadgeByIdStmt.run(historyRow.badge_id);
     }
     nextBadges = await selectStudentBadges(studentRow.id);
+  } else if (historyRow.type === 'redeem') {
+    // 兑换撤回：退还肉量
+    nextSpentFood = Math.max(0, nextSpentFood - (historyRow.cost || 0));
   } else {
     throw new HttpError(400, '该记录不支持撤回');
   }
@@ -878,6 +888,7 @@ const revokeSingleHistoryTx = async (historyRow, classRow) => {
     nextPetStage,
     nextFoodCount,
     nextPetNickname,
+    nextSpentFood,
     timestamp,
     studentRow.id
   );
@@ -890,9 +901,11 @@ const revokeSingleHistoryTx = async (historyRow, classRow) => {
     revokedRecordId: historyRow.id,
     revokedScoreItemName: historyRow.type === 'graduate'
       ? '毕业收获'
-      : (historyRow.score_item_name || '操作'),
-    revokedScoreValue: historyRow.type === 'graduate'
-      ? (historyRow.score_value ?? 0)
+      : historyRow.type === 'redeem'
+        ? (historyRow.reward_name || '兑换')
+        : (historyRow.score_item_name || '操作'),
+    revokedScoreValue: historyRow.type === 'redeem'
+      ? (historyRow.cost ?? 0)
       : (historyRow.score_value ?? 0),
     petId: nextPetId,
     timestamp: nowTs(),
@@ -906,6 +919,7 @@ const revokeSingleHistoryTx = async (historyRow, classRow) => {
     student: {
       id: studentRow.id,
       foodCount: nextFoodCount,
+      spentFood: nextSpentFood,
       petStage: nextPetStage,
       petId: nextPetId,
       badges: nextBadges,
@@ -946,6 +960,7 @@ const revokeBatchHistoryTx = async (classRow, historyRows) => {
       name: studentRow.name,
       sortOrder: studentRow.sort_order,
       petNickname: studentRow.pet_nickname || null,
+      spentFood: studentRow.spent_food || 0,
     };
 
     existing.foodCount = Math.max(0, existing.foodCount - (historyRow.score_value || 0));
@@ -974,6 +989,7 @@ const revokeBatchHistoryTx = async (classRow, historyRows) => {
       student.petStage,
       student.foodCount,
       student.petNickname,
+      student.spentFood,
       timestamp,
       student.id
     );
@@ -1609,6 +1625,7 @@ app.post('/api/classes/:classId/reuse-config', requireUser, asyncRoute(async (re
             calculateStageFromFood(student.food_count, nextStageThresholds),
             student.food_count,
             student.pet_nickname || null,
+            student.spent_food || 0,
             timestamp,
             student.id
           );
@@ -1692,6 +1709,7 @@ app.post('/api/students/:studentId/rename-pet', requireUser, asyncRoute(async (r
     studentRow.pet_stage,
     studentRow.food_count,
     nickname,
+    studentRow.spent_food || 0,
     timestamp,
     studentRow.id
   );
@@ -1767,6 +1785,7 @@ app.post('/api/history/class/:classId/checkin', requireUser, asyncRoute(async (r
       nextPetStage,
       nextFoodCount,
       studentRow.pet_nickname || null,
+      studentRow.spent_food || 0,
       timestamp,
       studentRow.id
     );
@@ -1830,6 +1849,7 @@ app.post('/api/history/class/:classId/checkin-batch', requireUser, asyncRoute(as
         nextPetStage,
         nextFoodCount,
         studentRow.pet_nickname || null,
+        studentRow.spent_food || 0,
         timestamp,
         studentRow.id
       );
@@ -1884,14 +1904,15 @@ app.post('/api/history/class/:classId/redeem', requireUser, asyncRoute(async (re
     throw new HttpError(409, '库存不足');
   }
 
-  const availableBadges = await getAvailableBadgeBalance(classRow.id, studentRow.id);
-  if (availableBadges < reward.cost) {
-    throw new HttpError(409, '徽章不足，无法兑换');
+  const availableFood = Math.max(0, (studentRow.food_count || 0) - (studentRow.spent_food || 0));
+  if (availableFood < reward.cost) {
+    throw new HttpError(409, '肉量不足，无法兑换');
   }
 
   await ensureHistoryLimit(classRow.id, 1);
   inventory[reward.id] = currentStock - 1;
   const timestamp = nowIso();
+  const nextSpentFood = (studentRow.spent_food || 0) + reward.cost;
   let history;
 
   await db.transaction(async () => {
@@ -1906,6 +1927,19 @@ app.post('/api/history/class/:classId/redeem', requireUser, asyncRoute(async (re
       JSON.stringify(inventory),
       timestamp,
       classRow.id
+    );
+
+    await updateStudentCoreStmt.run(
+      studentRow.name,
+      studentRow.sort_order,
+      studentRow.group_id || null,
+      studentRow.pet_id || null,
+      studentRow.pet_stage,
+      studentRow.food_count,
+      studentRow.pet_nickname || null,
+      nextSpentFood,
+      timestamp,
+      studentRow.id
     );
 
     history = await insertHistoryRecordTx({
@@ -1930,6 +1964,7 @@ app.post('/api/history/class/:classId/redeem', requireUser, asyncRoute(async (re
     history,
     inventory,
     redemptions,
+    spentFood: nextSpentFood,
     studentName: studentRow.name,
     rewardName: reward.name,
     cost: reward.cost,
@@ -1967,14 +2002,16 @@ app.post('/api/history/class/:classId/graduate', requireUser, asyncRoute(async (
       timestamp
     );
 
+    // 毕业时保留 food_count 和 spent_food，只重置宠物状态
     await updateStudentCoreStmt.run(
       studentRow.name,
       studentRow.sort_order,
       studentRow.group_id || null,
       null,
       1,
-      0,
+      studentRow.food_count,
       null,
+      studentRow.spent_food || 0,
       timestamp,
       studentRow.id
     );
@@ -2005,7 +2042,8 @@ app.post('/api/history/class/:classId/graduate', requireUser, asyncRoute(async (
     history,
     student: {
       id: studentRow.id,
-      foodCount: 0,
+      foodCount: studentRow.food_count,
+      spentFood: studentRow.spent_food || 0,
       petStage: 1,
       petId: '',
       badges,

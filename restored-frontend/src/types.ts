@@ -47,6 +47,7 @@ export interface Student {
   petId?: string;
   petStage?: number;
   foodCount?: number;
+  spentFood?: number;
   badges?: Badge[];
   [key: string]: any;
 }
@@ -154,6 +155,7 @@ export interface CreateHistoryRecord {
 export interface RevokeStudentState {
   id: string;
   foodCount: number;
+  spentFood?: number;
   petStage: number;
   petId?: string;
   badges?: Badge[];

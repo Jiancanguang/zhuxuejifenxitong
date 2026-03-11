@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   // UI Essentials
-  X, ShoppingBag, Plus, Minus, Package, Coins, Settings2, Trash2, Pencil, Save, Store, Search, Award,
+  X, ShoppingBag, Plus, Minus, Package, Coins, Settings2, Trash2, Pencil, Save, Store, Search,
   Gift, Users, Check as CheckIconLucide, History as HistoryIcon
 } from 'lucide-react';
 import { RewardItem, Student, Badge, HistoryRecord } from '../types';
@@ -86,13 +86,11 @@ export const StoreModal: React.FC<StoreModalProps> = ({
     onConfirm: () => void;
   }>({ isOpen: false, type: 'confirm', title: '', message: '', onConfirm: () => { } });
 
-  // Calculate available badges for each student
-  const getStudentBadgeInfo = (studentId: string) => {
-    const studentBadges = badges[studentId] || [];
-    const totalEarned = studentBadges.length;
-    const consumed = history
-      .filter(h => h.studentId === studentId && h.type === 'redeem')
-      .reduce((sum, h) => sum + (h.cost || 0), 0);
+  // Calculate available food for each student
+  const getStudentFoodInfo = (studentId: string) => {
+    const student = students.find(s => s.id === studentId);
+    const totalEarned = student?.foodCount || 0;
+    const consumed = student?.spentFood || 0;
     const available = Math.max(0, totalEarned - consumed);
     return { totalEarned, consumed, available };
   };
@@ -184,7 +182,7 @@ export const StoreModal: React.FC<StoreModalProps> = ({
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-wider">价格 (徽章)</label>
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-wider">价格 (🍖)</label>
                   <input
                     type="number"
                     min="0"
@@ -313,7 +311,7 @@ export const StoreModal: React.FC<StoreModalProps> = ({
               <div>
                 <h3 className="font-black text-xl text-white">选择兑换学生</h3>
                 <p className="text-indigo-100 text-sm">
-                  {selectingReward.name} · 需要 <Award size={12} className="inline" /> {selectingReward.cost} 徽章
+                  {selectingReward.name} · 需要 🍖×{selectingReward.cost}
                 </p>
               </div>
             </div>
@@ -356,7 +354,7 @@ export const StoreModal: React.FC<StoreModalProps> = ({
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {students.filter(s => matchesSearch(s.name, searchTerm)).map(student => {
-                  const info = getStudentBadgeInfo(student.id);
+                  const info = getStudentFoodInfo(student.id);
                   const canAfford = info.available >= selectingReward.cost;
 
                   return (
@@ -375,7 +373,7 @@ export const StoreModal: React.FC<StoreModalProps> = ({
                             isOpen: true,
                             type: 'confirm',
                             title: '确认兑换',
-                            message: `确定要为 ${student.name} 兑换 "${selectingReward.name}" 吗？\n\n💰 将消耗 ${selectingReward.cost} 个徽章`,
+                            message: `确定要为 ${student.name} 兑换 "${selectingReward.name}" 吗？\n\n🍖 将消耗 ${selectingReward.cost} 块肉`,
                             onConfirm: () => {
                               onRedeem(selectingReward.id, student.id, selectingReward.cost);
                               setSelectingReward(null);
@@ -387,8 +385,8 @@ export const StoreModal: React.FC<StoreModalProps> = ({
                           setDialogState({
                             isOpen: true,
                             type: 'alert',
-                            title: '徽章不足',
-                            message: `${student.name} 的徽章不足！\n\n当前可用: ${info.available} 个\n兑换需要: ${selectingReward.cost} 个\n\n请先完成宠物养成获取更多徽章！`,
+                            title: '肉量不足',
+                            message: `${student.name} 的肉量不足！\n\n当前可用: ${info.available} 🍖\n兑换需要: ${selectingReward.cost} 🍖\n\n请先通过加分获取更多肉！`,
                             onConfirm: () => setDialogState(prev => ({ ...prev, isOpen: false }))
                           });
                         }
@@ -403,12 +401,12 @@ export const StoreModal: React.FC<StoreModalProps> = ({
                             flex items-center gap-1 px-3 py-1 rounded-full text-sm font-black
                             ${canAfford ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-500'}
                           `}>
-                            <Award size={14} />
+                            <span>🍖</span>
                             <span>{info.available}</span>
                           </div>
                         </div>
                         <div className="text-xs text-slate-400 mt-2">
-                          累计 {info.totalEarned} · 已用 {info.consumed}
+                          累计 🍖{info.totalEarned} · 已用 🍖{info.consumed}
                         </div>
                         {canAfford && (
                           <div className="mt-3 py-1.5 px-3 bg-indigo-500 text-white text-xs font-black rounded-full opacity-0 group-hover:opacity-100 transition-opacity inline-block">
@@ -417,7 +415,7 @@ export const StoreModal: React.FC<StoreModalProps> = ({
                         )}
                         {!canAfford && (
                           <div className="mt-3 text-xs text-rose-400 font-bold">
-                            徽章不足
+                            肉量不足
                           </div>
                         )}
                       </div>
@@ -569,7 +567,7 @@ export const StoreModal: React.FC<StoreModalProps> = ({
                         </div>
 
                         <div className="flex items-center gap-2 bg-slate-50 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full border border-slate-100 shrink-0 ml-2">
-                          <Award size={14} className="text-amber-500" />
+                          <span>🍖</span>
                           <span className="font-black text-slate-600 text-sm">{record.cost}</span>
                         </div>
                       </div>
@@ -613,7 +611,7 @@ export const StoreModal: React.FC<StoreModalProps> = ({
 
                       {/* Price Tag Badge */}
                       <div className={`absolute top-2 right-2 sm:top-3 sm:right-3 bg-gradient-to-br from-amber-400 to-yellow-500 ${isEditMode ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-sm'} rounded-full font-black flex items-center gap-1 sm:gap-1.5 shadow-lg shadow-amber-200/50 z-20 text-white`}>
-                        <Award size={14} className="text-white" />
+                        <span>🍖</span>
                         <span>{item.cost}</span>
                       </div>
                     </div>

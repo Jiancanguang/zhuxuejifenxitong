@@ -128,7 +128,18 @@ export async function fetchClasses(): Promise<Record<string, ClassState>> {
 // 创建新班级
 export async function createClass(title: string): Promise<ClassState> {
   const cls = await api.post<ClassState>('/api/classes', { title });
-  return cls;
+
+  // 后端默认值可能过时，用前端最新默认值覆盖
+  await api.put(`/api/classes/${cls.id}`, {
+    rewards: REWARDS,
+    scoreItems: DEFAULT_SCORE_ITEMS,
+  });
+
+  return {
+    ...cls,
+    rewards: REWARDS,
+    scoreItems: DEFAULT_SCORE_ITEMS,
+  };
 }
 
 // 更新班级

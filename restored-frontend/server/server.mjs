@@ -1010,9 +1010,14 @@ const revokeBatchHistoryTx = async (classRow, historyRows) => {
 };
 
 const ensureAdminBootstrap = async () => {
-  const created = await bootstrapAdminAccount();
-  if (created) {
-    console.log(`[server] Created admin account: ${config.adminUsername}`);
+  try {
+    const created = await bootstrapAdminAccount();
+    if (created) {
+      console.log(`[server] Created admin account: ${config.adminUsername}`);
+    }
+  } catch (err) {
+    console.error('[server] 管理员账号初始化失败:', err.message);
+    console.error('[server] 服务将继续运行，但管理员功能可能不可用');
   }
 };
 
@@ -2265,4 +2270,36 @@ app.use(errorHandler);
 app.listen(config.port, () => {
   console.log(`[server] Listening on http://localhost:${config.port}`);
   console.log('[server] Database: postgres');
+}).on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`[server] 端口 ${config.port} 已被占用，请检查是否有其他进程在使用`);
+  } else {
+    console.error('[server] 服务器启动失败:', err.message);
+  }
+  process.exit(1);
 });
+
+process.on('uncaughtException', (err) => {
+  console.error('[server] 未捕获的异常:', err.message);
+  console.error(err.stack);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[server] 未处理的 Promise 拒绝:', reason);
+  process.exit(1);
+});
+
+const gracefulShutdown = async (signal) => {
+  console.log(`[server] 收到 ${signal} 信号，正在关闭服务...`);
+  try {
+    await db.close();
+    console.log('[server] 数据库连接已关闭');
+  } catch {
+    // ignore
+  }
+  process.exit(0);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));

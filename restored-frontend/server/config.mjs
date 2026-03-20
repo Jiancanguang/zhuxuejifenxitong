@@ -44,3 +44,12 @@ export const config = {
 };
 
 export const isProduction = config.nodeEnv === 'production';
+
+if (isProduction) {
+  if (config.jwtSecret === 'replace-this-in-production') {
+    console.warn('[config] 警告: JWT_SECRET 使用了默认值，生产环境请务必设置安全的密钥');
+  }
+  if (config.adminPassword === 'ChangeMe123!') {
+    console.warn('[config] 警告: ADMIN_PASSWORD 使用了默认值，请尽快修改管理员密码');
+  }
+}

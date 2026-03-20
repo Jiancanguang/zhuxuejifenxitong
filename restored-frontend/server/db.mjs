@@ -4,7 +4,9 @@ import { config } from './config.mjs';
 import { runMigrations } from './migrations.mjs';
 
 if (!config.databaseUrl) {
-  throw new Error('DATABASE_URL 未配置');
+  console.error('[db] 致命错误: DATABASE_URL 环境变量未配置');
+  console.error('[db] 请在 Render 后台或 .env 文件中设置 DATABASE_URL');
+  process.exit(1);
 }
 
 types.setTypeParser(20, (value) => Number.parseInt(value, 10));
@@ -24,6 +26,10 @@ const normalizeSql = (sql) => replacePlaceholders(sql).trim();
 const pool = new Pool({
   connectionString: config.databaseUrl,
   ssl: config.databaseSsl ? { rejectUnauthorized: false } : undefined,
+});
+
+pool.on('error', (err) => {
+  console.error('[db] 数据库连接池发生意外错误:', err.message);
 });
 
 const getExecutor = () => transactionStorage.getStore()?.client || pool;
@@ -79,4 +85,15 @@ export const db = {
   close: async () => pool.end(),
 };
 
-await runMigrations(db);
+try {
+  const applied = await runMigrations(db);
+  if (applied.length > 0) {
+    console.log(`[db] 已执行 ${applied.length} 个数据库迁移: ${applied.join(', ')}`);
+  }
+  console.log('[db] 数据库连接成功');
+} catch (err) {
+  console.error('[db] 数据库迁移失败:', err.message);
+  console.error('[db] 请检查 DATABASE_URL 是否正确，以及数据库是否可以访问');
+  await pool.end().catch(() => {});
+  process.exit(1);
+}

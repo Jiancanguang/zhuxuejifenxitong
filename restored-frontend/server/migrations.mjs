@@ -143,6 +143,49 @@ const migrations = [
       `);
     },
   },
+  {
+    id: '003_add_audit_logs',
+    up: async (db) => {
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS audit_logs (
+          id TEXT PRIMARY KEY,
+          actor_id TEXT NOT NULL,
+          actor_username TEXT NOT NULL,
+          actor_role TEXT NOT NULL,
+          action TEXT NOT NULL,
+          resource_type TEXT NOT NULL,
+          resource_id TEXT,
+          summary TEXT NOT NULL,
+          meta TEXT,
+          ip_address TEXT,
+          created_at TEXT NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_audit_logs_actor ON audit_logs(actor_id);
+        CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
+        CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_audit_logs_resource ON audit_logs(resource_type, resource_id);
+      `);
+    },
+  },
+  {
+    id: '004_add_backup_records',
+    up: async (db) => {
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS backup_records (
+          id TEXT PRIMARY KEY,
+          filename TEXT NOT NULL,
+          file_size BIGINT NOT NULL DEFAULT 0,
+          trigger_type TEXT NOT NULL DEFAULT 'manual',
+          status TEXT NOT NULL DEFAULT 'completed',
+          error_message TEXT,
+          created_at TEXT NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_backup_records_created ON backup_records(created_at DESC);
+      `);
+    },
+  },
 ];
 
 const ensureMigrationsTable = async (db) => {

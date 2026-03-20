@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, LogOut, Shield, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users, LogOut, Shield, Menu, X, FileText, Database } from 'lucide-react';
 import { isAdminLoggedIn, adminLogout } from '../../services/admin';
 import { useScrollLock } from '../../hooks/useMobile';
 
 const navItems = [
   { path: '/admin', icon: LayoutDashboard, label: '仪表盘', end: true },
   { path: '/admin/users', icon: Users, label: '用户管理' },
+  { path: '/admin/audit-logs', icon: FileText, label: '审计日志' },
+  { path: '/admin/backups', icon: Database, label: '数据备份' },
 ];
 
 export const AdminLayout: React.FC = () => {

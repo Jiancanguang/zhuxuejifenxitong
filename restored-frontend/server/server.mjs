@@ -34,6 +34,9 @@ import {
   sendSuccess,
 } from './http.mjs';
 import { broadcastSyncEvent, registerSyncClient } from './sse.mjs';
+import { writeAuditLog, queryAuditLogs, getClientIp } from './audit.mjs';
+import { globalApiLimiter, authLimiter, writeLimiter } from './rate-limit.mjs';
+import { runBackup, queryBackupRecords, deleteBackup, startBackupScheduler } from './backup-scheduler.mjs';
 
 const resolveCorsOrigin = (origin, callback) => {
   if (!origin || config.corsOrigins.length === 0 || config.corsOrigins.includes(origin)) {
@@ -49,6 +52,9 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: false }));
+
+// 全局 API 限流
+app.use('/api', globalApiLimiter);
 
 const nowIso = () => new Date().toISOString();
 const nowTs = () => Date.now();
@@ -1031,7 +1037,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-app.post('/api/auth/register', asyncRoute(async (req, res) => {
+app.post('/api/auth/register', authLimiter, asyncRoute(async (req, res) => {
   const username = String(req.body?.username || '').trim();
   const password = String(req.body?.password || '');
 
@@ -1064,7 +1070,7 @@ app.post('/api/auth/register', asyncRoute(async (req, res) => {
   sendSuccess(res, { user: sanitizeUser(userRow), token }, 201);
 }));
 
-app.post('/api/auth/login', asyncRoute(async (req, res) => {
+app.post('/api/auth/login', authLimiter, asyncRoute(async (req, res) => {
   const username = String(req.body?.username || '').trim();
   const password = String(req.body?.password || '');
 
@@ -1172,7 +1178,7 @@ app.post('/api/auth/activate', requireUser, asyncRoute(async (req, res) => {
   sendSuccess(res, { user: sanitizeUser(userRow) });
 }));
 
-app.post('/api/admin/login', asyncRoute(async (req, res) => {
+app.post('/api/admin/login', authLimiter, asyncRoute(async (req, res) => {
   const username = String(req.body?.username || '').trim();
   const password = String(req.body?.password || '');
   const adminRow = await selectUserByUsernameRoleStmt.get(username, 'admin');
@@ -1298,6 +1304,17 @@ app.put('/api/admin/users/:userId/toggle-disable', requireAdmin, asyncRoute(asyn
     await revokeAllSessionsForUser(userId, 'user');
   }
 
+  writeAuditLog({
+    actorId: req.auth.userRow.id,
+    actorUsername: req.auth.userRow.username,
+    actorRole: 'admin',
+    action: disabled ? 'user.disable' : 'user.enable',
+    resourceType: 'user',
+    resourceId: userId,
+    summary: `${disabled ? '禁用' : '启用'}用户 ${userRow.username}`,
+    ipAddress: getClientIp(req),
+  });
+
   sendSuccess(res, {});
 }));
 
@@ -1310,6 +1327,18 @@ app.put('/api/admin/users/:userId/reset-password', requireAdmin, asyncRoute(asyn
 
   await updateUserPasswordStmt.run(hashPassword(DEFAULT_RESET_PASSWORD), nowIso(), userId);
   await revokeAllSessionsForUser(userId, 'user');
+
+  writeAuditLog({
+    actorId: req.auth.userRow.id,
+    actorUsername: req.auth.userRow.username,
+    actorRole: 'admin',
+    action: 'user.reset-password',
+    resourceType: 'user',
+    resourceId: userId,
+    summary: `重置用户 ${userRow.username} 的密码`,
+    ipAddress: getClientIp(req),
+  });
+
   sendSuccess(res, {});
 }));
 
@@ -1340,11 +1369,24 @@ app.delete('/api/admin/users/:userId', requireAdmin, asyncRoute(async (req, res)
     throw new HttpError(404, '用户不存在');
   }
 
+  const deletedUsername = userRow.username;
   await db.transaction(async () => {
     await clearActiveLicensesByUserStmt.run(userId);
     await clearRevokedLicensesByUserStmt.run(userId);
     await deleteUserStmt.run(userId);
   })();
+
+  writeAuditLog({
+    actorId: req.auth.userRow.id,
+    actorUsername: req.auth.userRow.username,
+    actorRole: 'admin',
+    action: 'user.delete',
+    resourceType: 'user',
+    resourceId: userId,
+    summary: `删除用户 ${deletedUsername}`,
+    ipAddress: getClientIp(req),
+  });
+
   sendSuccess(res, {});
 }));
 
@@ -1399,6 +1441,17 @@ app.post('/api/admin/licenses/generate', requireAdmin, asyncRoute(async (req, re
       codes.push(code);
     }
   })();
+
+  writeAuditLog({
+    actorId: req.auth.userRow.id,
+    actorUsername: req.auth.userRow.username,
+    actorRole: 'admin',
+    action: 'license.generate',
+    resourceType: 'license',
+    summary: `生成 ${count} 个激活码`,
+    meta: { count, note },
+    ipAddress: getClientIp(req),
+  });
 
   sendSuccess(res, { codes }, 201);
 }));
@@ -1536,6 +1589,17 @@ app.delete('/api/classes/:classId', requireUser, asyncRoute(async (req, res) => 
     req.auth.userRow.id
   );
 
+  writeAuditLog({
+    actorId: req.auth.userRow.id,
+    actorUsername: req.auth.userRow.username,
+    actorRole: 'user',
+    action: 'class.delete',
+    resourceType: 'class',
+    resourceId: classRow.id,
+    summary: `删除班级 ${classRow.title}`,
+    ipAddress: getClientIp(req),
+  });
+
   emitSync(req.auth, classRow.id, 'class', 'class-deleted');
   sendSuccess(res, {});
 }));
@@ -1556,6 +1620,17 @@ app.post('/api/classes/:classId/reset-progress', requireUser, asyncRoute(async (
       await touchClassStmt.run(timestamp, classRow.id);
     })();
   }, '班级正在重置，请稍后重试');
+
+  writeAuditLog({
+    actorId: req.auth.userRow.id,
+    actorUsername: req.auth.userRow.username,
+    actorRole: 'user',
+    action: 'class.reset-progress',
+    resourceType: 'class',
+    resourceId: classRow.id,
+    summary: `重置班级 ${classRow.title} 的全部进度`,
+    ipAddress: getClientIp(req),
+  });
 
   emitSync(req.auth, classRow.id, 'class', 'class-reset');
   sendSuccess(res, {});
@@ -2250,6 +2325,64 @@ app.put('/api/groups/class/:classId/batch-assign', requireUser, asyncRoute(async
   });
 }));
 
+// ========== 审计日志 API ==========
+
+app.get('/api/admin/audit-logs', requireAdmin, asyncRoute(async (req, res) => {
+  const page = Math.max(1, Number.parseInt(req.query.page || '1', 10) || 1);
+  const perPage = Math.max(1, Math.min(100, Number.parseInt(req.query.perPage || '20', 10) || 20));
+  const action = req.query.action || null;
+  const search = req.query.search ? String(req.query.search).trim() : null;
+
+  const result = await queryAuditLogs({ page, perPage, action, search });
+  sendSuccess(res, result);
+}));
+
+// ========== 备份管理 API ==========
+
+app.get('/api/admin/backups', requireAdmin, asyncRoute(async (req, res) => {
+  const page = Math.max(1, Number.parseInt(req.query.page || '1', 10) || 1);
+  const perPage = Math.max(1, Math.min(100, Number.parseInt(req.query.perPage || '20', 10) || 20));
+  const result = await queryBackupRecords({ page, perPage });
+  sendSuccess(res, result);
+}));
+
+app.post('/api/admin/backups', requireAdmin, asyncRoute(async (req, res) => {
+  const result = await runBackup('manual');
+
+  writeAuditLog({
+    actorId: req.auth.userRow.id,
+    actorUsername: req.auth.userRow.username,
+    actorRole: 'admin',
+    action: 'backup.create',
+    resourceType: 'backup',
+    resourceId: result.id,
+    summary: `手动创建备份 ${result.filename}`,
+    ipAddress: getClientIp(req),
+  });
+
+  sendSuccess(res, result, 201);
+}));
+
+app.delete('/api/admin/backups/:backupId', requireAdmin, asyncRoute(async (req, res) => {
+  const deleted = await deleteBackup(req.params.backupId);
+  if (!deleted) {
+    throw new HttpError(404, '备份记录不存在');
+  }
+
+  writeAuditLog({
+    actorId: req.auth.userRow.id,
+    actorUsername: req.auth.userRow.username,
+    actorRole: 'admin',
+    action: 'backup.delete',
+    resourceType: 'backup',
+    resourceId: req.params.backupId,
+    summary: `删除备份记录`,
+    ipAddress: getClientIp(req),
+  });
+
+  sendSuccess(res, {});
+}));
+
 app.use('/api', notFoundApiHandler);
 
 app.use(express.static(config.publicDir, { index: false }));
@@ -2270,6 +2403,7 @@ app.use(errorHandler);
 app.listen(config.port, () => {
   console.log(`[server] Listening on http://localhost:${config.port}`);
   console.log('[server] Database: postgres');
+  startBackupScheduler();
 }).on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
     console.error(`[server] 端口 ${config.port} 已被占用，请检查是否有其他进程在使用`);

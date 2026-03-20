@@ -25,6 +25,8 @@ import { AdminLoginPage } from './components/admin/AdminLoginPage';
 import { AdminLayout } from './components/admin/AdminLayout';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { AdminUsers } from './components/admin/AdminUsers';
+import { AdminAuditLogs } from './components/admin/AdminAuditLogs';
+import { AdminBackups } from './components/admin/AdminBackups';
 import { THEMES, ALL_PETS, DEFAULT_SYSTEM_TITLE, REWARDS, DEFAULT_STAGE_THRESHOLDS, DEFAULT_SCORE_ITEMS, calculateStageFromFood, canGraduate, getPetById } from './constants';
 import { GlobalState, ClassState, Badge, PetBreed, HistoryRecord, Student, Group, RewardItem, ScoreItem, ReuseConfigField, StudentSortMode } from './types';
 import { matchesSearch, generateTestStudentNames } from './utils';
@@ -2387,6 +2389,8 @@ function App() {
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
           <Route path="users" element={<AdminUsers />} />
+          <Route path="audit-logs" element={<AdminAuditLogs />} />
+          <Route path="backups" element={<AdminBackups />} />
         </Route>
 
         {/* Main App Routes */}

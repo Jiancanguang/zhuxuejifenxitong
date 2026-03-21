@@ -25,6 +25,8 @@ import { AdminLoginPage } from './components/admin/AdminLoginPage';
 import { AdminLayout } from './components/admin/AdminLayout';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { AdminUsers } from './components/admin/AdminUsers';
+import { AdminAuditLogs } from './components/admin/AdminAuditLogs';
+import { AdminBackups } from './components/admin/AdminBackups';
 import { THEMES, ALL_PETS, DEFAULT_SYSTEM_TITLE, REWARDS, DEFAULT_STAGE_THRESHOLDS, DEFAULT_SCORE_ITEMS, calculateStageFromFood, canGraduate, getPetById } from './constants';
 import { GlobalState, ClassState, Badge, PetBreed, HistoryRecord, Student, Group, RewardItem, ScoreItem, ReuseConfigField, StudentSortMode } from './types';
 import { matchesSearch, generateTestStudentNames } from './utils';
@@ -1388,7 +1390,7 @@ function MainApp() {
       if (error.statusCode === 401) {
         if (error.message === '密码错误，请重试') return error.message;
         if (error.message.includes('登录已过期')) return error.message;
-        if (error.message.includes('其他设备')) return error.message;
+        if (error.message.includes('登录已失效')) return error.message;
         if (error.message.includes('请先登录')) return error.message;
         if (error.message.includes('无效的登录凭证')) return error.message;
         return '复用配置失败，请稍后重试';
@@ -1695,12 +1697,12 @@ function MainApp() {
             <AlertTriangle className="w-8 h-8 text-amber-500" />
           </div>
           <h2 className="text-xl font-bold text-slate-800 mb-2">
-            {kickReason === 'disabled' ? '账号已被禁用' : '已在其他设备登录'}
+            {kickReason === 'disabled' ? '账号已被禁用' : '登录已失效'}
           </h2>
           <p className="text-slate-500 mb-4">
             {kickReason === 'disabled'
               ? '您的账号已被管理员禁用，请联系客服了解详情'
-              : '您的账号已在其他设备登录，当前设备已自动退出'}
+              : '当前登录已失效，请重新登录'}
           </p>
           <button
             onClick={() => {
@@ -2336,12 +2338,12 @@ function KickNoticeScreen({ kickReason, onConfirm }: { kickReason: 'disabled' | 
           <AlertTriangle className="w-8 h-8 text-amber-500" />
         </div>
         <h2 className="text-xl font-bold text-slate-800 mb-2">
-          {kickReason === 'disabled' ? '账号已被禁用' : '已在其他设备登录'}
+          {kickReason === 'disabled' ? '账号已被禁用' : '登录已失效'}
         </h2>
         <p className="text-slate-500 mb-6">
           {kickReason === 'disabled'
             ? '您的账号已被管理员禁用，请联系客服了解详情'
-            : '您的账号已在其他设备登录，当前设备已自动退出'}
+            : '当前登录已失效，请重新登录'}
         </p>
         <button
           onClick={onConfirm}
@@ -2387,6 +2389,8 @@ function App() {
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
           <Route path="users" element={<AdminUsers />} />
+          <Route path="audit-logs" element={<AdminAuditLogs />} />
+          <Route path="backups" element={<AdminBackups />} />
         </Route>
 
         {/* Main App Routes */}

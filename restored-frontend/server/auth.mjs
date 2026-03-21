@@ -65,12 +65,23 @@ export const issueSessionToken = async (userRow, role = userRow.role) => {
   const sessionId = randomUUID();
   const timestamp = nowIso();
 
-  await db.transaction(async () => {
-    await revokeAllSessionsStmt.run(timestamp, userRow.id, role);
-    await insertSessionStmt.run(sessionId, userRow.id, role, timestamp, timestamp);
-  })();
+  // 支持多设备同时登录：不再撤销旧 session，直接追加新 session
+  await insertSessionStmt.run(sessionId, userRow.id, role, timestamp, timestamp);
+
+  // 异步清理过期 session（超过 90 天未活跃的），防止表膨胀
+  cleanupStaleSessions(userRow.id, role).catch(() => {});
 
   return signToken(userRow, role, sessionId);
+};
+
+const STALE_SESSION_DAYS = 90;
+
+const cleanupStaleSessions = async (userId, role) => {
+  const cutoff = new Date(Date.now() - STALE_SESSION_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  await db.query(
+    `DELETE FROM sessions WHERE user_id = $1 AND role = $2 AND revoked_at IS NULL AND last_seen_at < $3`,
+    [userId, role, cutoff]
+  );
 };
 
 export const revokeAllSessionsForUser = async (userId, role = 'user') => {
@@ -129,7 +140,7 @@ const resolveToken = async (token, expectedRole) => {
   if (!sessionRow) {
     const message = expectedRole === 'admin'
       ? '管理员登录已失效，请重新登录'
-      : '账号已在其他设备登录，请重新登录';
+      : '登录已失效，请重新登录';
     throw new HttpError(401, message);
   }
 

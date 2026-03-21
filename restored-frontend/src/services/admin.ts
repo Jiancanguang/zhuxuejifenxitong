@@ -103,3 +103,67 @@ export async function deleteUser(userId: string): Promise<void> {
 export async function getUserDetail(userId: string): Promise<AdminUser> {
   return api.get<AdminUser>(`/api/admin/users/${userId}`, { useAdminToken: true });
 }
+
+// ========== 审计日志 ==========
+
+export interface AuditLog {
+  id: string;
+  actorId: string;
+  actorUsername: string;
+  actorRole: string;
+  action: string;
+  resourceType: string;
+  resourceId?: string;
+  summary: string;
+  meta?: Record<string, any>;
+  ipAddress?: string;
+  createdAt: string;
+}
+
+export async function getAuditLogs(
+  page: number = 1,
+  perPage: number = 20,
+  action?: string,
+  search?: string
+): Promise<{ items: AuditLog[]; totalItems: number; totalPages: number }> {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    perPage: perPage.toString(),
+  });
+  if (action) params.set('action', action);
+  if (search) params.set('search', search);
+
+  return api.get(`/api/admin/audit-logs?${params}`, { useAdminToken: true });
+}
+
+// ========== 备份管理 ==========
+
+export interface BackupRecord {
+  id: string;
+  filename: string;
+  fileSize: number;
+  fileSizeFormatted: string;
+  triggerType: string;
+  status: string;
+  errorMessage?: string;
+  createdAt: string;
+}
+
+export async function getBackups(
+  page: number = 1,
+  perPage: number = 20
+): Promise<{ items: BackupRecord[]; totalItems: number; totalPages: number }> {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    perPage: perPage.toString(),
+  });
+  return api.get(`/api/admin/backups?${params}`, { useAdminToken: true });
+}
+
+export async function createBackup(): Promise<{ id: string; filename: string; fileSize: number }> {
+  return api.post('/api/admin/backups', {}, { useAdminToken: true });
+}
+
+export async function deleteBackupRecord(backupId: string): Promise<void> {
+  await api.delete(`/api/admin/backups/${backupId}`, { useAdminToken: true });
+}

@@ -8,7 +8,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 // 被踢出或禁用时的消息
 const KICK_MESSAGES = {
   disabled: '您的账号已被禁用，请联系客服',
-  kicked: '您的账号已在其他设备登录，当前设备已退出',
+  kicked: '登录已失效，请重新登录',
 };
 
 // 认证初始化超时时间（毫秒）- 防止网络问题导致永久 Loading

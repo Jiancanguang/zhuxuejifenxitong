@@ -226,7 +226,7 @@ export const BadgeWallModal: React.FC<BadgeWallModalProps> = ({
           )}
           <div className="text-center">
           <p className="text-sm text-slate-400">
-            继续努力，获取更多肉来兑换奖品吧！
+            继续努力，获取更多肉来兑换奖品吧！兑换不影响宠物成长哦～
           </p>
           </div>
         </div>

@@ -326,6 +326,13 @@ export const StoreModal: React.FC<StoreModalProps> = ({
 
 
           <div className="flex-1 overflow-y-auto p-6">
+            {/* Tip: 兑换不影响宠物成长 */}
+            <div className="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3">
+              <span className="text-lg leading-none mt-0.5">💡</span>
+              <p className="text-sm text-amber-800 font-medium">
+                兑换奖品<strong>不会影响宠物成长</strong>！宠物成长只看累计获得的肉量，花掉的肉不会让宠物变小哦～放心兑换吧！
+              </p>
+            </div>
             {/* Search Bar */}
             <div className="mb-6 relative">
               <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
@@ -373,7 +380,7 @@ export const StoreModal: React.FC<StoreModalProps> = ({
                             isOpen: true,
                             type: 'confirm',
                             title: '确认兑换',
-                            message: `确定要为 ${student.name} 兑换 "${selectingReward.name}" 吗？\n\n🍖 将消耗 ${selectingReward.cost} 块肉`,
+                            message: `确定要为 ${student.name} 兑换 "${selectingReward.name}" 吗？\n\n🍖 将消耗 ${selectingReward.cost} 块肉\n\n💡 放心，兑换不会影响宠物成长哦！`,
                             onConfirm: () => {
                               onRedeem(selectingReward.id, student.id, selectingReward.cost);
                               setSelectingReward(null);
@@ -469,7 +476,7 @@ export const StoreModal: React.FC<StoreModalProps> = ({
                   {isEditMode ? '货架管理' : '小卖部'}
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-500 font-bold uppercase tracking-widest mt-0.5 sm:mt-1 opacity-60 hidden sm:block">
-                  {isEditMode ? 'Store Manager' : 'Magic Store'}
+                  {isEditMode ? 'Store Manager' : '兑换不影响宠物成长，放心花肉吧！'}
                 </p>
               </div>
             </div>

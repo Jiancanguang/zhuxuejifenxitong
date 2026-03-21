@@ -1390,7 +1390,7 @@ function MainApp() {
       if (error.statusCode === 401) {
         if (error.message === '密码错误，请重试') return error.message;
         if (error.message.includes('登录已过期')) return error.message;
-        if (error.message.includes('其他设备')) return error.message;
+        if (error.message.includes('登录已失效')) return error.message;
         if (error.message.includes('请先登录')) return error.message;
         if (error.message.includes('无效的登录凭证')) return error.message;
         return '复用配置失败，请稍后重试';
@@ -1697,12 +1697,12 @@ function MainApp() {
             <AlertTriangle className="w-8 h-8 text-amber-500" />
           </div>
           <h2 className="text-xl font-bold text-slate-800 mb-2">
-            {kickReason === 'disabled' ? '账号已被禁用' : '已在其他设备登录'}
+            {kickReason === 'disabled' ? '账号已被禁用' : '登录已失效'}
           </h2>
           <p className="text-slate-500 mb-4">
             {kickReason === 'disabled'
               ? '您的账号已被管理员禁用，请联系客服了解详情'
-              : '您的账号已在其他设备登录，当前设备已自动退出'}
+              : '当前登录已失效，请重新登录'}
           </p>
           <button
             onClick={() => {
@@ -2338,12 +2338,12 @@ function KickNoticeScreen({ kickReason, onConfirm }: { kickReason: 'disabled' | 
           <AlertTriangle className="w-8 h-8 text-amber-500" />
         </div>
         <h2 className="text-xl font-bold text-slate-800 mb-2">
-          {kickReason === 'disabled' ? '账号已被禁用' : '已在其他设备登录'}
+          {kickReason === 'disabled' ? '账号已被禁用' : '登录已失效'}
         </h2>
         <p className="text-slate-500 mb-6">
           {kickReason === 'disabled'
             ? '您的账号已被管理员禁用，请联系客服了解详情'
-            : '您的账号已在其他设备登录，当前设备已自动退出'}
+            : '当前登录已失效，请重新登录'}
         </p>
         <button
           onClick={onConfirm}

@@ -164,7 +164,7 @@ export async function checkAuthValid(): Promise<AuthCheckResult> {
         notifyAuthChange(null);
         return 'disabled';
       }
-      if (error.message.includes('其他设备')) {
+      if (error.message.includes('登录已失效')) {
         tokenManager.clearToken();
         notifyAuthChange(null);
         return 'kicked';

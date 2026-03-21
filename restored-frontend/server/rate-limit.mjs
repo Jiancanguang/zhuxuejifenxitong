@@ -83,11 +83,12 @@ export const globalApiLimiter = createRateLimiter({
 });
 
 /**
- * 认证相关限流（登录/注册）：每个 IP 每分钟 10 次
+ * 认证相关限流（登录/注册）：每个 IP 每分钟 60 次
+ * 学校/工作室环境下多个用户共享同一公网 IP，需要较高的限额
  */
 export const authLimiter = createRateLimiter({
   windowMs: 60 * 1000,
-  maxRequests: 10,
+  maxRequests: 60,
   message: '登录尝试过于频繁，请稍后再试',
 });
 

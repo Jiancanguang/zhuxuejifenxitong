@@ -469,7 +469,7 @@ export const StoreModal: React.FC<StoreModalProps> = ({
                   {isEditMode ? '货架管理' : '小卖部'}
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-500 font-bold uppercase tracking-widest mt-0.5 sm:mt-1 opacity-60 hidden sm:block">
-                  {isEditMode ? 'Store Manager' : 'Magic Store'}
+                  {isEditMode ? 'Store Manager' : '兑换不影响宠物成长，放心花肉吧！'}
                 </p>
               </div>
             </div>

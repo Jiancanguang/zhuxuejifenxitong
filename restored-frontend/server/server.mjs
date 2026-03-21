@@ -1187,6 +1187,10 @@ app.post('/api/admin/login', authLimiter, asyncRoute(async (req, res) => {
     throw new HttpError(401, '账号或密码错误');
   }
 
+  if (adminRow.is_disabled) {
+    throw new HttpError(401, '账号已被禁用');
+  }
+
   const token = await issueSessionToken(adminRow, 'admin');
   sendSuccess(res, { token });
 }));

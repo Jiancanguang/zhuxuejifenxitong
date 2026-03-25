@@ -1,0 +1,21 @@
+<!--徽章墙-->
+<view class="container">
+  <view class="page-header">
+    <text class="page-title">{{studentName}} 的荣誉徽章</text>
+    <text class="page-subtitle">共获得 {{badges.length}} 枚徽章</text>
+  </view>
+
+  <view class="badge-grid" wx:if="{{badges.length > 0}}">
+    <view class="badge-card" wx:for="{{badges}}" wx:key="id">
+      <view class="badge-medal">&#x1F3C5;</view>
+      <view class="badge-name">{{item.petName || '宠物'}}</view>
+      <view class="badge-date">{{item.earnedDate}}</view>
+    </view>
+  </view>
+
+  <view class="empty-state" wx:if="{{badges.length === 0}}">
+    <text class="icon">&#x1F3C5;</text>
+    <text class="text">还没有获得徽章</text>
+    <text class="text" style="font-size: 24rpx; margin-top: 8rpx;">宠物成长到最高等级后可以毕业获得徽章</text>
+  </view>
+</view>

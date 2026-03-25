@@ -1,0 +1,140 @@
+<!--学生详情页-->
+<view class="container" wx:if="{{!loading && student}}">
+  <!-- 头部：学生信息卡片 -->
+  <view class="student-card">
+    <view class="student-header">
+      <view class="student-avatar">
+        <text class="avatar-emoji">&#x1F43E;</text>
+      </view>
+      <view class="student-info">
+        <view class="student-name">{{student.name}}</view>
+        <view class="class-name">{{classInfo.title}}</view>
+      </view>
+      <view class="unbind-btn" bindtap="handleUnbind">
+        <text class="unbind-text">解绑</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 宠物状态卡片 -->
+  <view class="pet-card">
+    <view class="pet-header">
+      <view class="pet-name-row">
+        <text class="pet-emoji">&#x1F431;</text>
+        <text class="pet-nickname" wx:if="{{student.petNickname}}">{{student.petNickname}}</text>
+        <text class="pet-nickname" wx:else>我的宠物</text>
+      </view>
+      <view class="pet-stage-badge">
+        <text>{{stageName}} Lv.{{student.petStage}}</text>
+      </view>
+    </view>
+
+    <!-- 积分展示 -->
+    <view class="food-display">
+      <view class="food-count">
+        <text class="food-number">{{student.foodCount}}</text>
+        <text class="food-label">总积分</text>
+      </view>
+      <view class="food-divider"></view>
+      <view class="food-count">
+        <text class="food-number">{{student.foodCount - student.spentFood}}</text>
+        <text class="food-label">可用积分</text>
+      </view>
+    </view>
+
+    <!-- 进度条 -->
+    <view class="progress-section">
+      <view class="progress-header">
+        <text class="progress-label">距离下一阶段</text>
+        <text class="progress-value">{{stageProgress}}%</text>
+      </view>
+      <view class="progress-bar-bg">
+        <view class="progress-bar-fill" style="width: {{stageProgress}}%"></view>
+      </view>
+      <view class="progress-hint" wx:if="{{student.petStage < 10}}">
+        还需 {{nextThreshold - student.foodCount}} 积分升级
+      </view>
+      <view class="progress-hint" wx:else>
+        已达到最高等级！
+      </view>
+    </view>
+  </view>
+
+  <!-- 排名卡片 -->
+  <view class="ranking-card" wx:if="{{ranking}}">
+    <view class="ranking-content">
+      <view class="ranking-item">
+        <text class="ranking-number">{{ranking.rank}}</text>
+        <text class="ranking-label">班级排名</text>
+      </view>
+      <view class="ranking-divider"></view>
+      <view class="ranking-item">
+        <text class="ranking-number">{{ranking.total}}</text>
+        <text class="ranking-label">班级人数</text>
+      </view>
+      <view class="ranking-divider"></view>
+      <view class="ranking-item">
+        <text class="ranking-number">{{badges.length}}</text>
+        <text class="ranking-label">获得徽章</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 最近记录 -->
+  <view class="section">
+    <view class="section-header" bindtap="goToHistory">
+      <text class="section-title">最近记录</text>
+      <text class="section-more">查看全部 ></text>
+    </view>
+
+    <view class="record-list" wx:if="{{recentRecords.length > 0}}">
+      <view class="record-item" wx:for="{{recentRecords}}" wx:key="id">
+        <view class="record-left">
+          <view class="record-type {{item.isPositive ? 'type-positive' : ''}} {{item.isNegative ? 'type-negative' : ''}} {{item.isRedeem ? 'type-redeem' : ''}} {{item.isGraduate ? 'type-graduate' : ''}}">
+            {{item.typeText}}
+          </view>
+          <view class="record-name">
+            <text wx:if="{{item.type === 'checkin'}}">{{item.scoreItemName}}</text>
+            <text wx:elif="{{item.type === 'redeem'}}">兑换 {{item.rewardName}}</text>
+            <text wx:elif="{{item.type === 'graduate'}}">宠物毕业</text>
+          </view>
+        </view>
+        <view class="record-right">
+          <text class="record-value {{item.isPositive ? 'value-positive' : ''}} {{item.isNegative ? 'value-negative' : ''}} {{item.isRedeem ? 'value-negative' : ''}}">
+            {{item.displayValue}}
+          </text>
+          <text class="record-time">{{item.timeText}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="empty-records" wx:else>
+      <text>暂无记录</text>
+    </view>
+  </view>
+
+  <!-- 徽章入口 -->
+  <view class="badge-entry" bindtap="goToBadges" wx:if="{{badges.length > 0}}">
+    <view class="badge-entry-left">
+      <text class="badge-icon">&#x1F3C5;</text>
+      <text class="badge-entry-title">荣誉徽章墙</text>
+    </view>
+    <view class="badge-entry-right">
+      <text class="badge-count">{{badges.length}} 枚</text>
+      <text class="badge-arrow">></text>
+    </view>
+  </view>
+</view>
+
+<!-- 加载中 -->
+<view class="loading-container" wx:if="{{loading}}">
+  <view class="loading-spinner"></view>
+  <text class="loading-text">加载中...</text>
+</view>
+
+<!-- 错误 -->
+<view class="error-container" wx:if="{{!loading && error}}">
+  <text class="error-icon">&#x26A0;</text>
+  <text class="error-text">{{error}}</text>
+  <button class="btn-secondary" bindtap="loadData">重试</button>
+</view>

@@ -1,0 +1,57 @@
+<!--积分记录-->
+<view class="container">
+  <!-- 统计信息 -->
+  <view class="stats-bar" wx:if="{{!loading && records.length > 0}}">
+    <text class="stats-text">共 {{total}} 条记录</text>
+  </view>
+
+  <!-- 记录列表 -->
+  <view class="record-list" wx:if="{{!loading && records.length > 0}}">
+    <view class="record-card" wx:for="{{records}}" wx:key="id">
+      <view class="record-main">
+        <view class="record-left">
+          <view class="record-type-tag {{item.isPositive ? 'tag-positive' : ''}} {{item.isNegative ? 'tag-negative' : ''}} {{item.isRedeem ? 'tag-redeem' : ''}} {{item.isGraduate ? 'tag-graduate' : ''}}">
+            {{item.typeText}}
+          </view>
+          <view class="record-desc">{{item.description}}</view>
+        </view>
+        <view class="record-value-area">
+          <text class="record-value {{item.isPositive ? 'value-positive' : ''}} {{item.isNegative ? 'value-negative' : ''}} {{item.isRedeem ? 'value-negative' : ''}}">
+            {{item.displayValue}}
+          </text>
+        </view>
+      </view>
+      <view class="record-footer">
+        <text class="record-time">{{item.timeText}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 加载更多 -->
+  <view class="load-more" wx:if="{{loadingMore}}">
+    <view class="loading-spinner small"></view>
+    <text class="load-more-text">加载中...</text>
+  </view>
+
+  <view class="no-more" wx:if="{{!hasMore && records.length > 0 && !loading}}">
+    <text>-- 没有更多了 --</text>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="empty-state" wx:if="{{!loading && records.length === 0 && !error}}">
+    <text class="icon">&#x1F4DD;</text>
+    <text class="text">暂无积分记录</text>
+  </view>
+
+  <!-- 加载中 -->
+  <view class="loading-container" wx:if="{{loading}}">
+    <view class="loading-spinner"></view>
+    <text style="color: #94a3b8; margin-top: 20rpx; font-size: 26rpx;">加载中...</text>
+  </view>
+
+  <!-- 错误 -->
+  <view class="empty-state" wx:if="{{error && !loading}}">
+    <text class="icon">&#x26A0;</text>
+    <text class="text">{{error}}</text>
+  </view>
+</view>

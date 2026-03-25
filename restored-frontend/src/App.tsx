@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Settings, Trophy, LayoutGrid, Undo2, CheckCircle2, Eraser, ShoppingBag, Cloud, Search, Sparkles, Users, X, Loader2, WifiOff, AlertTriangle, Download, ArrowUpDown, ChevronDown } from 'lucide-react';
+import { Settings, Trophy, LayoutGrid, Undo2, CheckCircle2, Eraser, ShoppingBag, Cloud, Search, Sparkles, Users, X, Loader2, WifiOff, AlertTriangle, Download, ArrowUpDown, ChevronDown, QrCode } from 'lucide-react';
 import { StudentCard } from './components/StudentCard';
 import { SettingsModal } from './components/SettingsModal';
 import { PetSelectionModal } from './components/PetSelectionModal';
@@ -18,6 +18,7 @@ import { GroupManagerModal } from './components/groups/GroupManagerModal';
 import { GroupFilterBar, GroupFilterValue } from './components/groups/GroupFilterBar';
 import { GroupAssignModal } from './components/groups/GroupAssignModal';
 import { PetRenameModal } from './components/PetRenameModal';
+import { ParentCodesModal } from './components/ParentCodesModal';
 import { AuthPage } from './components/AuthPage';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { useCloudData } from './hooks/useCloudData';
@@ -142,6 +143,7 @@ function MainApp() {
   const [scoringStudent, setScoringStudent] = useState<string | null>(null); // 正在选择加分项的学生
   const [showRecordLimitWarning, setShowRecordLimitWarning] = useState(false);
   const [showCollectOrb, setShowCollectOrb] = useState(false); // 光团收集动画
+  const [isParentCodesOpen, setIsParentCodesOpen] = useState(false);
   const [collectingStudentId, setCollectingStudentId] = useState<string | null>(null); // 正在收集徽章的学生
   const [orbTargetPos, setOrbTargetPos] = useState({ x: 0, y: 0 }); // 光团目标位置
   const [petRenameStudentId, setPetRenameStudentId] = useState<string | null>(null);
@@ -1861,6 +1863,7 @@ function MainApp() {
           <div className="hidden sm:flex items-center gap-2 shrink-0 ml-2">
             <NavButton icon={<ShoppingBag size={18} />} label="小卖部" onClick={() => setIsStoreOpen(true)} theme={currentTheme} />
             <NavButton icon={<Trophy size={18} />} label="光荣榜" onClick={() => setIsLeaderboardOpen(true)} theme={currentTheme} />
+            <NavButton icon={<QrCode size={18} />} label="家长码" onClick={() => setIsParentCodesOpen(true)} theme={currentTheme} />
             <div className="w-px h-6 bg-slate-200 mx-1 hidden sm:block" />
             <NavButton
               icon={isRevokeMode ? <Eraser size={18} /> : <Undo2 size={18} />}
@@ -2242,6 +2245,14 @@ function MainApp() {
         }}
         onClose={() => setScoringStudent(null)}
         isBatchMode={scoringStudent === 'batch'}
+      />
+
+      <ParentCodesModal
+        isOpen={isParentCodesOpen}
+        onClose={() => setIsParentCodesOpen(false)}
+        classId={store.currentClassId || ''}
+        classTitle={currentClass.classTitle || ''}
+        apiBaseUrl=""
       />
 
       {/* 独立的光团收集动画 - 性能优化版 */}

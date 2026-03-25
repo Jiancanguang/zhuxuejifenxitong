@@ -363,3 +363,50 @@ export async function graduateStudent(classId: string, data: {
 export async function renamePet(studentId: string, nickname: string): Promise<RenamePetResult> {
   return api.post<RenamePetResult>(`/api/students/${studentId}/rename-pet`, { nickname });
 }
+
+// ===== 家长查看码管理 =====
+
+export interface ParentCodeItem {
+  id: string;
+  student_id: string;
+  class_id: string;
+  code: string;
+  is_active: boolean;
+  student_name: string;
+  created_at: string;
+  last_used_at: string | null;
+}
+
+export interface GenerateCodeResult {
+  id: string;
+  code: string;
+  studentId: string;
+  studentName: string;
+}
+
+export interface BatchCodeItem {
+  studentId: string;
+  studentName: string;
+  code: string;
+  existed: boolean;
+}
+
+// 为单个学生生成查看码
+export async function generateParentCode(studentId: string): Promise<GenerateCodeResult> {
+  return api.post<GenerateCodeResult>(`/api/parent-codes/student/${studentId}`);
+}
+
+// 批量为班级所有学生生成查看码
+export async function batchGenerateParentCodes(classId: string): Promise<{ codes: BatchCodeItem[] }> {
+  return api.post<{ codes: BatchCodeItem[] }>(`/api/parent-codes/class/${classId}/batch`);
+}
+
+// 获取班级的所有查看码
+export async function getParentCodes(classId: string): Promise<{ codes: ParentCodeItem[] }> {
+  return api.get<{ codes: ParentCodeItem[] }>(`/api/parent-codes/class/${classId}`);
+}
+
+// 停用查看码
+export async function deactivateParentCode(codeId: string): Promise<void> {
+  return api.delete(`/api/parent-codes/${codeId}`);
+}

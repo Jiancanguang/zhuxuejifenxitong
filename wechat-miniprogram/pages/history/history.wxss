@@ -1,0 +1,107 @@
+.stats-bar {
+  padding: 16rpx 0;
+  margin-bottom: 8rpx;
+}
+
+.stats-text {
+  font-size: 24rpx;
+  color: #94a3b8;
+}
+
+.record-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.record-card {
+  background: #ffffff;
+  border-radius: 20rpx;
+  padding: 24rpx 28rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.03);
+}
+
+.record-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.record-left {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  flex: 1;
+}
+
+.record-type-tag {
+  font-size: 20rpx;
+  font-weight: 600;
+  padding: 6rpx 16rpx;
+  border-radius: 8rpx;
+  background: #f1f5f9;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.tag-positive { background: #dcfce7; color: #16a34a; }
+.tag-negative { background: #fef2f2; color: #ef4444; }
+.tag-redeem { background: #fef3c7; color: #d97706; }
+.tag-graduate { background: #eef2ff; color: #6366f1; }
+
+.record-desc {
+  font-size: 28rpx;
+  color: #334155;
+  font-weight: 500;
+}
+
+.record-value-area {
+  flex-shrink: 0;
+  margin-left: 16rpx;
+}
+
+.record-value {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #475569;
+}
+
+.value-positive { color: #16a34a; }
+.value-negative { color: #ef4444; }
+
+.record-footer {
+  margin-top: 12rpx;
+  padding-top: 12rpx;
+  border-top: 1rpx solid #f1f5f9;
+}
+
+.record-time {
+  font-size: 22rpx;
+  color: #94a3b8;
+}
+
+/* 加载更多 */
+.load-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  padding: 32rpx;
+}
+
+.loading-spinner.small {
+  width: 32rpx;
+  height: 32rpx;
+}
+
+.load-more-text {
+  font-size: 24rpx;
+  color: #94a3b8;
+}
+
+.no-more {
+  text-align: center;
+  padding: 32rpx;
+  font-size: 24rpx;
+  color: #cbd5e1;
+}

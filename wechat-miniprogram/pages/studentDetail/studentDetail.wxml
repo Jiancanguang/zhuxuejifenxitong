@@ -4,7 +4,7 @@
   <view class="student-card">
     <view class="student-header">
       <view class="student-avatar">
-        <text class="avatar-emoji">&#x1F43E;</text>
+        <text class="avatar-emoji">🐾</text>
       </view>
       <view class="student-info">
         <view class="student-name">{{student.name}}</view>
@@ -20,7 +20,7 @@
   <view class="pet-card">
     <view class="pet-header">
       <view class="pet-name-row">
-        <text class="pet-emoji">&#x1F431;</text>
+        <text class="pet-emoji">🐱</text>
         <text class="pet-nickname" wx:if="{{student.petNickname}}">{{student.petNickname}}</text>
         <text class="pet-nickname" wx:else>我的宠物</text>
       </view>
@@ -116,7 +116,7 @@
   <!-- 徽章入口 -->
   <view class="badge-entry" bindtap="goToBadges" wx:if="{{badges.length > 0}}">
     <view class="badge-entry-left">
-      <text class="badge-icon">&#x1F3C5;</text>
+      <text class="badge-icon">🏅</text>
       <text class="badge-entry-title">荣誉徽章墙</text>
     </view>
     <view class="badge-entry-right">
@@ -134,7 +134,7 @@
 
 <!-- 错误 -->
 <view class="error-container" wx:if="{{!loading && error}}">
-  <text class="error-icon">&#x26A0;</text>
+  <text class="error-icon">⚠</text>
   <text class="error-text">{{error}}</text>
   <button class="btn-secondary" bindtap="loadData">重试</button>
 </view>

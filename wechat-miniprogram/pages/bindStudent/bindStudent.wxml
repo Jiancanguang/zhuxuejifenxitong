@@ -4,7 +4,7 @@
   <!-- 步骤1: 搜索班级 -->
   <view wx:if="{{step === 1}}">
     <view class="login-card">
-      <view class="login-icon">&#x1F3EB;</view>
+      <view class="login-icon">🏫</view>
       <view class="login-title">选择班级</view>
       <view class="login-desc">请输入班级名称搜索</view>
 
@@ -39,7 +39,7 @@
           bindtap="handleSelectClass"
           data-item="{{item}}"
         >
-          <text class="class-item-icon">&#x1F4DA;</text>
+          <text class="class-item-icon">📚</text>
           <text class="class-item-title">{{item.title}}</text>
           <text class="class-item-arrow">></text>
         </view>
@@ -60,7 +60,7 @@
       </view>
 
       <view class="selected-class">
-        <text class="selected-class-icon">&#x1F3EB;</text>
+        <text class="selected-class-icon">🏫</text>
         <text class="selected-class-title">{{selectedClass.title}}</text>
       </view>
 

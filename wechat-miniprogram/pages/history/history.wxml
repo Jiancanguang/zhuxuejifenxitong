@@ -39,7 +39,7 @@
 
   <!-- 空状态 -->
   <view class="empty-state" wx:if="{{!loading && records.length === 0 && !error}}">
-    <text class="icon">&#x1F4DD;</text>
+    <text class="icon">📝</text>
     <text class="text">暂无积分记录</text>
   </view>
 
@@ -51,7 +51,7 @@
 
   <!-- 错误 -->
   <view class="empty-state" wx:if="{{error && !loading}}">
-    <text class="icon">&#x26A0;</text>
+    <text class="icon">⚠</text>
     <text class="text">{{error}}</text>
   </view>
 </view>

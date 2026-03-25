@@ -35,7 +35,7 @@ import {
 } from './http.mjs';
 import { broadcastSyncEvent, registerSyncClient } from './sse.mjs';
 import { writeAuditLog, queryAuditLogs, getClientIp } from './audit.mjs';
-import { globalApiLimiter, authLimiter, writeLimiter } from './rate-limit.mjs';
+import { globalApiLimiter, authLimiter, writeLimiter, createRateLimiter } from './rate-limit.mjs';
 import { runBackup, queryBackupRecords, deleteBackup, startBackupScheduler } from './backup-scheduler.mjs';
 
 const resolveCorsOrigin = (origin, callback) => {
@@ -2385,6 +2385,293 @@ app.delete('/api/admin/backups/:backupId', requireAdmin, asyncRoute(async (req, 
   });
 
   sendSuccess(res, {});
+}));
+
+// =============================================
+// 家长端 API（微信小程序）
+// =============================================
+
+const parentAccessLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  maxRequests: 30,
+  message: '请求过于频繁，请稍后再试',
+});
+
+// 准备语句
+const selectAccessCodeByCodeStmt = db.prepare(`
+  SELECT pac.*, s.name AS student_name, s.pet_id, s.pet_stage, s.food_count,
+         s.pet_nickname, s.spent_food, s.group_id,
+         c.title AS class_title, c.stage_thresholds, c.theme_id, c.rewards, c.score_items
+  FROM parent_access_codes pac
+  JOIN students s ON s.id = pac.student_id
+  JOIN classes c ON c.id = pac.class_id
+  WHERE pac.code = ? AND pac.is_active = TRUE
+`);
+const selectAccessCodesByStudentStmt = db.prepare(`
+  SELECT * FROM parent_access_codes
+  WHERE student_id = ?
+  ORDER BY created_at DESC
+`);
+const selectAccessCodesByClassStmt = db.prepare(`
+  SELECT pac.*, s.name AS student_name
+  FROM parent_access_codes pac
+  JOIN students s ON s.id = pac.student_id
+  WHERE pac.class_id = ?
+  ORDER BY s.sort_order ASC, pac.created_at DESC
+`);
+const insertAccessCodeStmt = db.prepare(`
+  INSERT INTO parent_access_codes (id, student_id, class_id, code, is_active, created_at)
+  VALUES (?, ?, ?, ?, TRUE, ?)
+`);
+const deactivateAccessCodeStmt = db.prepare(`
+  UPDATE parent_access_codes SET is_active = FALSE WHERE id = ?
+`);
+const touchAccessCodeStmt = db.prepare(`
+  UPDATE parent_access_codes SET last_used_at = ? WHERE id = ?
+`);
+
+// 生成6位家长查看码
+const generateParentCode = () => {
+  const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  return Array.from({ length: 6 }, () => chars[randomInt(0, chars.length)]).join('');
+};
+
+// 教师：为学生生成家长查看码
+app.post('/api/parent-codes/student/:studentId', requireUser, writeLimiter, asyncRoute(async (req, res) => {
+  const { studentId } = req.params;
+  const userId = req.auth.userRow.id;
+
+  // 验证学生归属
+  const student = await db.prepare(`
+    SELECT s.*, c.user_id, c.id AS class_id
+    FROM students s
+    JOIN classes c ON c.id = s.class_id
+    WHERE s.id = ? AND c.user_id = ?
+  `).get(studentId, userId);
+
+  if (!student) {
+    throw new HttpError(404, '学生不存在');
+  }
+
+  // 生成唯一码（重试避免冲突）
+  let code;
+  for (let i = 0; i < 10; i++) {
+    code = generateParentCode();
+    const existing = await db.prepare('SELECT id FROM parent_access_codes WHERE code = ?').get(code);
+    if (!existing) break;
+    if (i === 9) throw new HttpError(500, '生成查看码失败，请重试');
+  }
+
+  const id = createId('pac');
+  await insertAccessCodeStmt.run(id, studentId, student.class_id, code, nowIso());
+
+  sendSuccess(res, { id, code, studentId, studentName: student.name }, 201);
+}));
+
+// 教师：批量为班级所有学生生成查看码
+app.post('/api/parent-codes/class/:classId/batch', requireUser, writeLimiter, asyncRoute(async (req, res) => {
+  const { classId } = req.params;
+  const userId = req.auth.userRow.id;
+
+  const classRow = await selectClassByIdAndUserStmt.get(classId, userId);
+  if (!classRow) {
+    throw new HttpError(404, '班级不存在');
+  }
+
+  const students = await selectStudentsByClassStmt.all(classId);
+  const results = [];
+
+  await db.transaction(async () => {
+    for (const student of students) {
+      // 检查是否已有活跃的查看码
+      const existing = await db.prepare(`
+        SELECT id, code FROM parent_access_codes
+        WHERE student_id = ? AND is_active = TRUE
+        LIMIT 1
+      `).get(student.id);
+
+      if (existing) {
+        results.push({ studentId: student.id, studentName: student.name, code: existing.code, existed: true });
+        continue;
+      }
+
+      let code;
+      for (let i = 0; i < 10; i++) {
+        code = generateParentCode();
+        const dup = await db.prepare('SELECT id FROM parent_access_codes WHERE code = ?').get(code);
+        if (!dup) break;
+      }
+
+      const id = createId('pac');
+      await insertAccessCodeStmt.run(id, student.id, classId, code, nowIso());
+      results.push({ studentId: student.id, studentName: student.name, code, existed: false });
+    }
+  })();
+
+  sendSuccess(res, { codes: results });
+}));
+
+// 教师：查看班级的所有查看码
+app.get('/api/parent-codes/class/:classId', requireUser, asyncRoute(async (req, res) => {
+  const { classId } = req.params;
+  const userId = req.auth.userRow.id;
+
+  const classRow = await selectClassByIdAndUserStmt.get(classId, userId);
+  if (!classRow) {
+    throw new HttpError(404, '班级不存在');
+  }
+
+  const codes = await selectAccessCodesByClassStmt.all(classId);
+  sendSuccess(res, { codes });
+}));
+
+// 教师：停用某个查看码
+app.delete('/api/parent-codes/:codeId', requireUser, writeLimiter, asyncRoute(async (req, res) => {
+  const { codeId } = req.params;
+  const userId = req.auth.userRow.id;
+
+  const codeRow = await db.prepare(`
+    SELECT pac.* FROM parent_access_codes pac
+    JOIN classes c ON c.id = pac.class_id
+    WHERE pac.id = ? AND c.user_id = ?
+  `).get(codeId, userId);
+
+  if (!codeRow) {
+    throw new HttpError(404, '查看码不存在');
+  }
+
+  await deactivateAccessCodeStmt.run(codeId);
+  sendSuccess(res, {});
+}));
+
+// ===== 家长端公开接口（无需登录，通过查看码访问） =====
+
+// 家长：通过查看码获取学生信息
+app.get('/api/parent/student', parentAccessLimiter, asyncRoute(async (req, res) => {
+  const code = (req.query.code || '').toString().trim().toUpperCase();
+  if (!code || code.length !== 6) {
+    throw new HttpError(400, '请输入正确的查看码');
+  }
+
+  const data = await selectAccessCodeByCodeStmt.get(code);
+  if (!data) {
+    throw new HttpError(404, '查看码无效或已过期');
+  }
+
+  // 更新最后使用时间
+  await touchAccessCodeStmt.run(nowIso(), data.id);
+
+  const thresholds = parseJson(data.stage_thresholds, DEFAULT_STAGE_THRESHOLDS);
+  const rewards = parseJson(data.rewards, DEFAULT_REWARDS);
+  const scoreItems = parseJson(data.score_items, DEFAULT_SCORE_ITEMS);
+
+  // 获取徽章
+  const badges = await db.prepare(`
+    SELECT * FROM badges
+    WHERE student_id = ?
+    ORDER BY earned_at DESC
+  `).all(data.student_id);
+
+  sendSuccess(res, {
+    student: {
+      id: data.student_id,
+      name: data.student_name,
+      petId: data.pet_id,
+      petStage: data.pet_stage,
+      foodCount: data.food_count,
+      spentFood: data.spent_food,
+      petNickname: data.pet_nickname,
+    },
+    class: {
+      title: data.class_title,
+      themeId: data.theme_id,
+      stageThresholds: thresholds,
+    },
+    badges: badges.map(b => ({
+      id: b.id,
+      petId: b.pet_id,
+      petName: b.pet_name,
+      earnedAt: b.earned_at,
+    })),
+    scoreItems: scoreItems.map(item => ({ name: item.name, score: item.score })),
+  });
+}));
+
+// 家长：获取学生的积分记录
+app.get('/api/parent/history', parentAccessLimiter, asyncRoute(async (req, res) => {
+  const code = (req.query.code || '').toString().trim().toUpperCase();
+  if (!code || code.length !== 6) {
+    throw new HttpError(400, '请输入正确的查看码');
+  }
+
+  const data = await selectAccessCodeByCodeStmt.get(code);
+  if (!data) {
+    throw new HttpError(404, '查看码无效或已过期');
+  }
+
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const pageSize = Math.min(50, Math.max(1, parseInt(req.query.pageSize) || 20));
+  const offset = (page - 1) * pageSize;
+
+  const records = await db.prepare(`
+    SELECT * FROM history_records
+    WHERE student_id = ? AND class_id = ? AND type IN ('checkin', 'redeem', 'graduate')
+    ORDER BY timestamp DESC
+    LIMIT ? OFFSET ?
+  `).all(data.student_id, data.class_id, pageSize, offset);
+
+  const countResult = await db.prepare(`
+    SELECT COUNT(*) AS total FROM history_records
+    WHERE student_id = ? AND class_id = ? AND type IN ('checkin', 'redeem', 'graduate')
+  `).get(data.student_id, data.class_id);
+
+  sendSuccess(res, {
+    records: records.map(r => ({
+      id: r.id,
+      type: r.type,
+      scoreItemName: r.score_item_name,
+      scoreValue: r.score_value,
+      rewardName: r.reward_name,
+      cost: r.cost,
+      timestamp: r.timestamp,
+      createdAt: r.created_at,
+    })),
+    pagination: {
+      page,
+      pageSize,
+      total: countResult.total,
+      totalPages: Math.ceil(countResult.total / pageSize),
+    },
+  });
+}));
+
+// 家长：获取学生排名信息
+app.get('/api/parent/ranking', parentAccessLimiter, asyncRoute(async (req, res) => {
+  const code = (req.query.code || '').toString().trim().toUpperCase();
+  if (!code || code.length !== 6) {
+    throw new HttpError(400, '请输入正确的查看码');
+  }
+
+  const data = await selectAccessCodeByCodeStmt.get(code);
+  if (!data) {
+    throw new HttpError(404, '查看码无效或已过期');
+  }
+
+  // 获取班级所有学生的积分排名
+  const allStudents = await db.prepare(`
+    SELECT id, name, food_count FROM students
+    WHERE class_id = ?
+    ORDER BY food_count DESC
+  `).all(data.class_id);
+
+  const rank = allStudents.findIndex(s => s.id === data.student_id) + 1;
+  const total = allStudents.length;
+
+  sendSuccess(res, {
+    rank,
+    total,
+    studentFoodCount: data.food_count,
+  });
 }));
 
 app.use('/api', notFoundApiHandler);

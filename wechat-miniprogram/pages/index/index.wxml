@@ -1,0 +1,46 @@
+<!--首页-->
+<view class="container" wx:if="{{!loading}}">
+  <view class="hero">
+    <view class="hero-icon">&#x1F431;</view>
+    <view class="hero-title">助学积分</view>
+    <view class="hero-subtitle">家长端</view>
+    <view class="hero-desc">查看孩子的课堂积分、宠物成长和获得的荣誉</view>
+  </view>
+
+  <view class="action-area">
+    <button class="btn-primary bind-btn" bindtap="goToBind">
+      输入查看码
+    </button>
+    <view class="hint">
+      请向老师获取您孩子的专属查看码
+    </view>
+  </view>
+
+  <view class="features">
+    <view class="feature-item">
+      <view class="feature-icon">&#x1F4CA;</view>
+      <view class="feature-text">
+        <view class="feature-title">实时积分</view>
+        <view class="feature-desc">随时查看孩子的积分变化</view>
+      </view>
+    </view>
+    <view class="feature-item">
+      <view class="feature-icon">&#x1F43E;</view>
+      <view class="feature-text">
+        <view class="feature-title">宠物成长</view>
+        <view class="feature-desc">观察宠物从蛋蛋成长为传说</view>
+      </view>
+    </view>
+    <view class="feature-item">
+      <view class="feature-icon">&#x1F3C6;</view>
+      <view class="feature-text">
+        <view class="feature-title">荣誉徽章</view>
+        <view class="feature-desc">查看孩子获得的所有徽章</view>
+      </view>
+    </view>
+  </view>
+</view>
+
+<view class="loading-container" wx:if="{{loading}}">
+  <view class="loading-spinner"></view>
+</view>

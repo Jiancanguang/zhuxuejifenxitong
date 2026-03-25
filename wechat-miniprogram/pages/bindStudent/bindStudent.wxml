@@ -1,0 +1,40 @@
+<!--绑定学生-->
+<view class="container">
+  <view class="bind-card">
+    <view class="bind-icon">&#x1F511;</view>
+    <view class="bind-title">输入查看码</view>
+    <view class="bind-desc">请输入老师提供的6位查看码</view>
+
+    <view class="input-wrapper">
+      <input
+        class="code-input"
+        type="text"
+        maxlength="6"
+        placeholder="请输入查看码"
+        value="{{code}}"
+        bindinput="onCodeInput"
+        confirm-type="done"
+        bindconfirm="onSubmit"
+        auto-focus
+      />
+    </view>
+
+    <view class="error-text" wx:if="{{error}}">{{error}}</view>
+
+    <button
+      class="btn-primary submit-btn"
+      bindtap="onSubmit"
+      disabled="{{loading || code.length < 6}}"
+      loading="{{loading}}"
+    >
+      {{loading ? '验证中...' : '确认绑定'}}
+    </button>
+  </view>
+
+  <view class="tips">
+    <view class="tips-title">如何获取查看码？</view>
+    <view class="tips-item">1. 联系孩子的老师</view>
+    <view class="tips-item">2. 老师在系统中生成家长查看码</view>
+    <view class="tips-item">3. 每个学生有独立的查看码</view>
+  </view>
+</view>

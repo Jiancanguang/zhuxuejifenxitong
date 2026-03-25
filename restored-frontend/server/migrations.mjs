@@ -186,6 +186,28 @@ const migrations = [
       `);
     },
   },
+  {
+    id: '005_add_parent_access_codes',
+    up: async (db) => {
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS parent_access_codes (
+          id TEXT PRIMARY KEY,
+          student_id TEXT NOT NULL,
+          class_id TEXT NOT NULL,
+          code TEXT NOT NULL UNIQUE,
+          is_active BOOLEAN NOT NULL DEFAULT TRUE,
+          created_at TEXT NOT NULL,
+          last_used_at TEXT,
+          FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+          FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_parent_access_code ON parent_access_codes(code);
+        CREATE INDEX IF NOT EXISTS idx_parent_access_student ON parent_access_codes(student_id);
+        CREATE INDEX IF NOT EXISTS idx_parent_access_class ON parent_access_codes(class_id);
+      `);
+    },
+  },
 ];
 
 const ensureMigrationsTable = async (db) => {

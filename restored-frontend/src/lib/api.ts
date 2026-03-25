@@ -5,8 +5,8 @@
  */
 
 // Token 存储 key
-const TOKEN_KEY = 'class-pet-garden-token';
-const ADMIN_TOKEN_KEY = 'class-pet-garden-admin-token';
+const TOKEN_KEY = 'zhuxue-jifen-token';
+const ADMIN_TOKEN_KEY = 'zhuxue-jifen-admin-token';
 
 // === 网络配置常量 ===
 const REQUEST_TIMEOUT = 20000; // 20秒超时

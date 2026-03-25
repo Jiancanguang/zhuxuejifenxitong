@@ -27,7 +27,7 @@ services:
       - key: ADMIN_USERNAME
         value: studioadmin
       - key: ADMIN_PASSWORD
-        value: ChangeMe123!
+        generateValue: true
       - key: CORS_ORIGIN
         value: https://zhuxuejifenxitong.vercel.app
       - key: BACKUP_DIR

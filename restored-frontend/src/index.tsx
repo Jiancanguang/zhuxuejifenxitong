@@ -18,7 +18,7 @@ Sentry.init({
   // 环境标识
   environment: import.meta.env.MODE,
   // 版本号
-  release: `class-pet-garden@${__APP_VERSION__}`,
+  release: `zhuxue-jifen@${__APP_VERSION__}`,
   // 忽略常见的非致命错误
   ignoreErrors: [
     // 浏览器扩展错误

@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: 'class-pet-garden',
+      name: 'zhuxue-jifen',
       cwd: __dirname,
       script: 'npm',
       args: 'start',

@@ -14,7 +14,7 @@ const migrations = [
           is_activated BOOLEAN NOT NULL DEFAULT TRUE,
           license_code TEXT,
           activated_at TEXT,
-          system_title TEXT NOT NULL DEFAULT '班级宠物园',
+          system_title TEXT NOT NULL DEFAULT '学生积分系统',
           current_class_id TEXT,
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL

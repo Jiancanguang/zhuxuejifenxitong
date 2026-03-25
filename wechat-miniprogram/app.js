@@ -3,7 +3,7 @@ App({
     // 修改为你的服务器地址（腾讯云服务器IP或域名）
     // 例如: https://your-domain.com
     // 注意：微信小程序正式版要求 HTTPS 域名，开发时可在开发者工具中关闭域名校验
-    apiBaseUrl: 'https://your-server-domain.com',
+    apiBaseUrl: 'https://zhuxue.work',
     token: '',
     classId: '',
     classTitle: '',

@@ -1,6 +1,6 @@
 import { PetBreed, RewardItem, ScoreItem } from './types';
 
-export const DEFAULT_SYSTEM_TITLE = '班级宠物园';
+export const DEFAULT_SYSTEM_TITLE = '学生积分系统';
 
 // 所有宠物定义，folder 对应动物图片文件夹名称
 export const ALL_PETS: PetBreed[] = [

@@ -13,7 +13,7 @@ services:
     ports:
       - "${PORT:-3001}:${PORT:-3001}"
     volumes:
-      - class-pet-garden-backups:/app/backups
+      - zhuxue-jifen-backups:/app/backups
 
 volumes:
-  class-pet-garden-backups:
+  zhuxue-jifen-backups:

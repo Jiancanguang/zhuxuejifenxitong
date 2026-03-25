@@ -47,7 +47,7 @@ export const AdminLayout: React.FC = () => {
             </div>
             <div>
               <h1 className="font-bold text-slate-800 leading-tight">管理后台</h1>
-              <p className="text-[11px] text-slate-500 leading-tight">班级宠物园</p>
+              <p className="text-[11px] text-slate-500 leading-tight">学生积分系统</p>
             </div>
           </div>
           <button
@@ -88,7 +88,7 @@ export const AdminLayout: React.FC = () => {
             </div>
             <div>
               <h1 className="font-bold text-lg">管理后台</h1>
-              <p className="text-xs text-slate-400">班级宠物园</p>
+              <p className="text-xs text-slate-400">学生积分系统</p>
             </div>
           </div>
         </div>

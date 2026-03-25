@@ -1,4 +1,4 @@
-export const DEFAULT_SYSTEM_TITLE = '班级宠物园';
+export const DEFAULT_SYSTEM_TITLE = '学生积分系统';
 export const DEFAULT_THEME_ID = 'pink';
 export const DEFAULT_RESET_PASSWORD = '123456';
 

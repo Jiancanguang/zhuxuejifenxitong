@@ -479,7 +479,7 @@
         </div>
         <div class="screen-nav__links">
           <a class="button button-primary" href="/system-guide.pdf" download="学生积分系统说明.pdf">下载 PDF</a>
-          <a class="button button-secondary" href="https://zhuxuejifenxitong.vercel.app" target="_blank" rel="noreferrer">打开系统</a>
+          <a class="button button-secondary" href="/" target="_blank" rel="noreferrer">打开系统</a>
         </div>
       </div>
     </nav>
@@ -487,12 +487,11 @@
     <main class="shell">
       <section class="page cover" id="cover">
         <div>
-          <div class="eyebrow">祈福筑学工作室 · 学生积分系统 · 独立部署版</div>
+          <div class="eyebrow">祈福筑学工作室 · 学生积分系统</div>
           <h1 class="cover-title">学生积分系统说明</h1>
           <p class="cover-subtitle">
-            本说明适用于当前工作室内部部署版本。该版本已取消激活码、卡密与外部购买流程，
-            采用前台注册 + 管理员后台管理的账号体系。当前由祈福筑学工作室维护，
-            暂未绑定自定义域名，现阶段以系统访问地址为准。
+            本说明适用于祈福筑学工作室学生积分系统。
+            老师注册账号后即可使用全部功能，包括加分、扣分、宠物养成、光荣榜等。
           </p>
 
           <div class="summary-grid">
@@ -502,23 +501,23 @@
             </div>
             <div class="card">
               <strong>前台地址</strong>
-              <p>https://zhuxuejifenxitong.vercel.app</p>
+              <p>http://106.53.7.170</p>
             </div>
             <div class="card">
               <strong>后台地址</strong>
-              <p>https://zhuxuejifenxitong.vercel.app/admin/login</p>
+              <p>http://106.53.7.170/admin/login</p>
             </div>
             <div class="card">
               <strong>文档版本</strong>
-              <p>v1.3.8 · 更新于 2026-03-09</p>
+              <p>v1.4.0 · 更新于 2026-03-25</p>
             </div>
             <div class="card">
               <strong>适用对象</strong>
               <p>班主任、任课老师、工作室运营管理员</p>
             </div>
             <div class="card">
-              <strong>自定义域名</strong>
-              <p>暂未绑定，当前使用系统访问地址</p>
+              <strong>服务器</strong>
+              <p>腾讯云轻量应用服务器（广州）</p>
             </div>
           </div>
 
@@ -570,7 +569,7 @@
             </div>
           </div>
           <div class="footer-meta" style="margin-top: 28px;">
-            <span>说明：本文件为祈福筑学工作室当前部署版系统文档，不依赖旧版激活流程。</span>
+            <span>说明：本文件为祈福筑学工作室学生积分系统使用文档。</span>
             <span>导出文件名：学生积分系统说明.pdf</span>
           </div>
         </div>
@@ -581,7 +580,7 @@
           <div>
             <h2 class="section-title">01 快速开始</h2>
             <p class="section-subtitle">
-              首次使用建议先注册老师账号，再进入系统完成基础设置。当前版本不需要输入激活码。
+              首次使用建议先注册老师账号，再进入系统完成基础设置。
             </p>
           </div>
         </div>
@@ -591,10 +590,10 @@
             <div class="step-index">1</div>
             <div>
               <h3>打开系统</h3>
-              <p>使用 Chrome、Edge 或 Safari 打开前台地址。若使用 Render 免费实例，首次访问可能需要等待 20-60 秒。</p>
+              <p>使用 Chrome、Edge 或 Safari 打开前台地址。</p>
               <ul class="list">
-                <li>前台：<strong>https://zhuxuejifenxitong.vercel.app</strong></li>
-                <li>后台：<strong>https://zhuxuejifenxitong.vercel.app/admin/login</strong></li>
+                <li>前台：<strong>http://106.53.7.170</strong></li>
+                <li>后台：<strong>http://106.53.7.170/admin/login</strong></li>
               </ul>
             </div>
           </article>
@@ -628,7 +627,7 @@
             <div class="step-index">4</div>
             <div>
               <h3>理解当前版本</h3>
-              <p>当前独立部署版已取消激活页、卡密校验和对外购买流程。前台注册后即可使用全部教学功能。</p>
+              <p>前台注册后即可使用全部教学功能。</p>
             </div>
           </article>
         </div>
@@ -823,11 +822,11 @@
           <tbody>
             <tr>
               <th>后台地址</th>
-              <td>前台域名后追加 <strong>/admin/login</strong>。当前地址：<strong>https://zhuxuejifenxitong.vercel.app/admin/login</strong></td>
+              <td>前台域名后追加 <strong>/admin/login</strong>。当前地址：<strong>http://106.53.7.170/admin/login</strong></td>
             </tr>
             <tr>
               <th>维护工作室</th>
-              <td>当前系统由 <strong>祈福筑学工作室</strong> 维护。后台账号仅供工作室管理员使用。</td>
+              <td>后台账号仅供管理员使用。如需管理员权限请联系工作室负责人。</td>
             </tr>
             <tr>
               <th>后台功能</th>
@@ -859,7 +858,7 @@
           <div>
             <h2 class="section-title">07 常见问题</h2>
             <p class="section-subtitle">
-              以下问题是独立部署版最常见的使用场景和排查方向。
+              以下是最常见的使用问题和排查方向。
             </p>
           </div>
         </div>
@@ -869,15 +868,15 @@
             <div class="step-index">Q1</div>
             <div>
               <h3>为什么第一次打开有点慢？</h3>
-              <p>如果后端部署在 Render 免费实例，长时间无访问后会进入休眠。第一次访问时需要等待实例重新启动，通常为 20-60 秒。</p>
+              <p>首次加载需要下载页面资源，后续访问会更快。如果持续加载缓慢，请检查网络连接。</p>
             </div>
           </article>
 
           <article class="step">
             <div class="step-index">Q2</div>
             <div>
-              <h3>为什么没有激活码页面？</h3>
-              <p>当前版本已改为内部账号体系，取消了激活码和卡密校验。老师直接注册账号即可使用。</p>
+              <h3>如何开始使用？</h3>
+              <p>老师直接在首页注册账号即可使用全部功能，无需激活码。</p>
             </div>
           </article>
 
@@ -893,7 +892,7 @@
             <div class="step-index">Q4</div>
             <div>
               <h3>系统提示无法连接服务器怎么办？</h3>
-              <p>优先刷新一次页面，并确认后端服务是否已启动。免费实例冷启动完成后通常会恢复；若持续失败，再检查 Render 后端与 Vercel 前端的域名配置和 CORS 设置。</p>
+              <p>优先刷新一次页面。若持续失败，请联系管理员检查服务器状态。</p>
             </div>
           </article>
 
@@ -901,7 +900,7 @@
             <div class="step-index">Q5</div>
             <div>
               <h3>可以绑定自己的域名吗？</h3>
-              <p>可以。当前尚未绑定自定义域名，现阶段使用系统默认访问地址。后续若接入自定义域名，记得同步更新后端 Render 的 <strong>CORS_ORIGIN</strong> 配置。</p>
+              <p>可以。购买域名后绑定到服务器即可，联系管理员进行配置。</p>
             </div>
           </article>
         </div>
@@ -909,7 +908,7 @@
         <div class="footer-meta" style="margin-top: 28px;">
           <span>文档名称：学生积分系统说明</span>
           <span>维护方：祈福筑学工作室</span>
-          <span>适用版本：v1.3.8 独立部署版</span>
+          <span>适用版本：v1.4.0</span>
           <span>生成日期：2026-03-09</span>
         </div>
       </section>

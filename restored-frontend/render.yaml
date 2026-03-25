@@ -1,0 +1,36 @@
+databases:
+  - name: zhuxue-db
+    plan: free
+    databaseName: zhuxue
+    user: zhuxue
+
+services:
+  - type: web
+    plan: free
+    name: zhuxuejifenxitong
+    runtime: node
+    rootDir: restored-frontend
+    buildCommand: npm install && npm run build
+    startCommand: node ./server/server.mjs
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: zhuxue-db
+          property: connectionString
+      - key: DATABASE_SSL
+        value: "true"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_USERNAME
+        value: studioadmin
+      - key: ADMIN_PASSWORD
+        value: ChangeMe123!
+      - key: CORS_ORIGIN
+        value: https://zhuxuejifenxitong.vercel.app
+      - key: BACKUP_DIR
+        value: ./backups
+      - key: PORT
+        value: "3001"

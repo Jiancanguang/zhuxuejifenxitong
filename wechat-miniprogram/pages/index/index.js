@@ -2,15 +2,13 @@ const app = getApp();
 
 Page({
   data: {
-    hasCode: false,
     loading: true,
   },
 
   onLoad() {
-    const code = app.globalData.accessCode;
-    if (code) {
-      // 已有查看码，直接跳转到详情页
-      this.setData({ hasCode: true, loading: false });
+    const token = app.globalData.token;
+    if (token) {
+      this.setData({ loading: false });
       wx.redirectTo({ url: '/pages/studentDetail/studentDetail' });
     } else {
       this.setData({ loading: false });
@@ -18,13 +16,12 @@ Page({
   },
 
   onShow() {
-    const code = app.globalData.accessCode;
-    if (code) {
+    if (app.globalData.token) {
       wx.redirectTo({ url: '/pages/studentDetail/studentDetail' });
     }
   },
 
-  goToBind() {
+  goToLogin() {
     wx.navigateTo({ url: '/pages/bindStudent/bindStudent' });
   },
 });

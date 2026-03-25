@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, Copy, Check, Loader2, QrCode, RefreshCw, Trash2, Download } from 'lucide-react';
+import { X, Loader2, Users, RefreshCw, Trash2, Download, KeyRound, Eye, EyeOff } from 'lucide-react';
 import * as dataService from '../services/data';
 
 interface ParentCodesModalProps {
@@ -10,38 +10,32 @@ interface ParentCodesModalProps {
   apiBaseUrl: string;
 }
 
-interface CodeDisplay {
+interface AccountDisplay {
   id: string;
   studentId: string;
   studentName: string;
-  code: string;
-  isActive: boolean;
+  username: string;
+  isEnabled: boolean;
+  lastLoginAt: string | null;
   createdAt: string;
-  lastUsedAt: string | null;
 }
 
-export function ParentCodesModal({ isOpen, onClose, classId, classTitle, apiBaseUrl }: ParentCodesModalProps) {
-  const [codes, setCodes] = useState<CodeDisplay[]>([]);
+export function ParentCodesModal({ isOpen, onClose, classId, classTitle }: ParentCodesModalProps) {
+  const [accounts, setAccounts] = useState<AccountDisplay[]>([]);
   const [loading, setLoading] = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [defaultPassword, setDefaultPassword] = useState('123456');
+  const [showPassword, setShowPassword] = useState(false);
 
-  const fetchCodes = useCallback(async () => {
+  const fetchAccounts = useCallback(async () => {
     if (!classId) return;
     setLoading(true);
     setError(null);
     try {
-      const result = await dataService.getParentCodes(classId);
-      setCodes(result.codes.map(c => ({
-        id: c.id,
-        studentId: c.student_id,
-        studentName: c.student_name,
-        code: c.code,
-        isActive: c.is_active,
-        createdAt: c.created_at,
-        lastUsedAt: c.last_used_at,
-      })));
+      const result = await dataService.getParentAccounts(classId);
+      setAccounts(result.accounts);
     } catch (err: any) {
       setError(err.message || '加载失败');
     } finally {
@@ -51,76 +45,79 @@ export function ParentCodesModal({ isOpen, onClose, classId, classTitle, apiBase
 
   useEffect(() => {
     if (isOpen && classId) {
-      fetchCodes();
+      fetchAccounts();
     }
-  }, [isOpen, classId, fetchCodes]);
+  }, [isOpen, classId, fetchAccounts]);
 
-  const handleBatchGenerate = async () => {
-    setGenerating(true);
+  const handleBatchCreate = async () => {
+    if (!defaultPassword || defaultPassword.length < 4) {
+      setError('密码至少4位');
+      return;
+    }
+    setCreating(true);
     setError(null);
+    setSuccessMsg(null);
     try {
-      await dataService.batchGenerateParentCodes(classId);
-      await fetchCodes();
+      const result = await dataService.batchCreateParentAccounts(classId, defaultPassword);
+      const newCount = result.accounts.filter(a => !a.existed).length;
+      const existCount = result.accounts.filter(a => a.existed).length;
+      let msg = '';
+      if (newCount > 0) msg += `成功创建 ${newCount} 个家长账号`;
+      if (existCount > 0) msg += `${newCount > 0 ? '，' : ''}${existCount} 个已存在`;
+      setSuccessMsg(msg || '操作完成');
+      await fetchAccounts();
     } catch (err: any) {
-      setError(err.message || '生成失败');
+      setError(err.message || '创建失败');
     } finally {
-      setGenerating(false);
+      setCreating(false);
     }
   };
 
-  const handleDeactivate = async (codeId: string) => {
+  const handleResetPassword = async (accountId: string, studentName: string) => {
     try {
-      await dataService.deactivateParentCode(codeId);
-      setCodes(prev => prev.filter(c => c.id !== codeId));
+      const result = await dataService.resetParentPassword(accountId);
+      setSuccessMsg(`${studentName} 的密码已重置为 ${result.password}`);
     } catch (err: any) {
-      setError(err.message || '操作失败');
+      setError(err.message || '重置失败');
     }
   };
 
-  const handleCopy = async (code: string) => {
+  const handleDelete = async (accountId: string) => {
     try {
-      await navigator.clipboard.writeText(code);
-      setCopiedCode(code);
-      setTimeout(() => setCopiedCode(null), 2000);
-    } catch {
-      // fallback
-      const input = document.createElement('input');
-      input.value = code;
-      document.body.appendChild(input);
-      input.select();
-      document.execCommand('copy');
-      document.body.removeChild(input);
-      setCopiedCode(code);
-      setTimeout(() => setCopiedCode(null), 2000);
+      await dataService.deleteParentAccount(accountId);
+      setAccounts(prev => prev.filter(a => a.id !== accountId));
+    } catch (err: any) {
+      setError(err.message || '删除失败');
     }
   };
 
   const handleExportAll = () => {
-    const activeCodes = codes.filter(c => c.isActive);
-    if (activeCodes.length === 0) return;
+    if (accounts.length === 0) return;
 
     const lines = [
-      `${classTitle} - 家长查看码`,
-      `生成时间: ${new Date().toLocaleString('zh-CN')}`,
+      `${classTitle} - 家长账号信息`,
+      `导出时间: ${new Date().toLocaleString('zh-CN')}`,
       '',
-      '学生姓名\t查看码',
-      ...activeCodes.map(c => `${c.studentName}\t${c.code}`),
+      '学生姓名（即登录账号）\t初始密码',
+      ...accounts.map(a => `${a.username}\t${defaultPassword}`),
       '',
-      '使用方式：在微信小程序"助学积分"中输入查看码即可查看孩子的积分情况。',
+      '登录方式：',
+      '1. 打开微信小程序「助学积分」',
+      '2. 搜索并选择班级',
+      '3. 输入学生姓名和密码登录',
+      '4. 登录后可修改密码',
     ];
 
     const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${classTitle}-家长查看码.txt`;
+    a.download = `${classTitle}-家长账号.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
   if (!isOpen) return null;
-
-  const activeCodes = codes.filter(c => c.isActive);
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -129,11 +126,11 @@ export function ParentCodesModal({ isOpen, onClose, classId, classTitle, apiBase
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div>
             <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-              <QrCode className="w-5 h-5 text-indigo-500" />
-              家长查看码
+              <Users className="w-5 h-5 text-indigo-500" />
+              家长账号管理
             </h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              家长在微信小程序中输入查看码即可查看积分
+              家长用学生姓名 + 密码登录小程序查看积分
             </p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -142,30 +139,55 @@ export function ParentCodesModal({ isOpen, onClose, classId, classTitle, apiBase
         </div>
 
         {/* Actions */}
-        <div className="px-5 py-3 border-b border-gray-50 flex gap-2">
-          <button
-            onClick={handleBatchGenerate}
-            disabled={generating}
-            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-500 text-white text-sm font-medium rounded-lg hover:bg-indigo-600 disabled:opacity-50 transition-colors"
-          >
-            {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-            {generating ? '生成中...' : '一键生成全班查看码'}
-          </button>
-          {activeCodes.length > 0 && (
+        <div className="px-5 py-3 border-b border-gray-50">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs text-gray-500 whitespace-nowrap">统一密码：</span>
+            <div className="relative flex-1 max-w-[160px]">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={defaultPassword}
+                onChange={e => setDefaultPassword(e.target.value)}
+                className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg pr-8"
+                placeholder="初始密码"
+              />
+              <button
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400"
+              >
+                {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+          </div>
+          <div className="flex gap-2">
             <button
-              onClick={handleExportAll}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white text-gray-700 text-sm font-medium rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+              onClick={handleBatchCreate}
+              disabled={creating}
+              className="flex items-center gap-1.5 px-3 py-2 bg-indigo-500 text-white text-sm font-medium rounded-lg hover:bg-indigo-600 disabled:opacity-50 transition-colors"
             >
-              <Download className="w-4 h-4" />
-              导出
+              {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              {creating ? '创建中...' : '一键开通全班账号'}
             </button>
-          )}
+            {accounts.length > 0 && (
+              <button
+                onClick={handleExportAll}
+                className="flex items-center gap-1.5 px-3 py-2 bg-white text-gray-700 text-sm font-medium rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                导出
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Error */}
+        {/* Messages */}
         {error && (
           <div className="mx-5 mt-3 px-3 py-2 bg-red-50 text-red-600 text-sm rounded-lg">
             {error}
+          </div>
+        )}
+        {successMsg && (
+          <div className="mx-5 mt-3 px-3 py-2 bg-green-50 text-green-600 text-sm rounded-lg">
+            {successMsg}
           </div>
         )}
 
@@ -175,41 +197,39 @@ export function ParentCodesModal({ isOpen, onClose, classId, classTitle, apiBase
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
             </div>
-          ) : activeCodes.length === 0 ? (
+          ) : accounts.length === 0 ? (
             <div className="text-center py-12 text-gray-400">
-              <QrCode className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p className="text-sm">还没有生成查看码</p>
-              <p className="text-xs mt-1">点击上方按钮为全班学生生成</p>
+              <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
+              <p className="text-sm">还没有开通家长账号</p>
+              <p className="text-xs mt-1">设置统一密码后，点击上方按钮一键开通</p>
             </div>
           ) : (
             <div className="space-y-2">
-              {activeCodes.map(item => (
+              {accounts.map(item => (
                 <div
                   key={item.id}
                   className="flex items-center justify-between px-3 py-2.5 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
                 >
                   <div className="flex-1 min-w-0">
                     <span className="text-sm font-medium text-gray-800">{item.studentName}</span>
+                    {item.lastLoginAt && (
+                      <span className="ml-2 text-[10px] text-green-500 bg-green-50 px-1.5 py-0.5 rounded">
+                        已登录
+                      </span>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-base font-bold text-indigo-600 tracking-wider">
-                      {item.code}
-                    </span>
+                  <div className="flex items-center gap-1">
                     <button
-                      onClick={() => handleCopy(item.code)}
+                      onClick={() => handleResetPassword(item.id, item.studentName)}
                       className="p-1.5 hover:bg-white rounded-lg transition-colors"
-                      title="复制查看码"
+                      title="重置密码"
                     >
-                      {copiedCode === item.code ? (
-                        <Check className="w-4 h-4 text-green-500" />
-                      ) : (
-                        <Copy className="w-4 h-4 text-gray-400" />
-                      )}
+                      <KeyRound className="w-4 h-4 text-gray-400 hover:text-indigo-500" />
                     </button>
                     <button
-                      onClick={() => handleDeactivate(item.id)}
+                      onClick={() => handleDelete(item.id)}
                       className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
-                      title="停用"
+                      title="删除账号"
                     >
                       <Trash2 className="w-4 h-4 text-gray-300 hover:text-red-400" />
                     </button>
@@ -221,9 +241,9 @@ export function ParentCodesModal({ isOpen, onClose, classId, classTitle, apiBase
         </div>
 
         {/* Footer */}
-        {activeCodes.length > 0 && (
+        {accounts.length > 0 && (
           <div className="px-5 py-3 border-t border-gray-100 text-xs text-gray-400">
-            共 {activeCodes.length} 个查看码 · 家长在小程序输入查看码即可
+            共 {accounts.length} 个账号 · 账号 = 学生姓名 · 家长在小程序登录即可
           </div>
         )}
       </div>

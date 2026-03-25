@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { randomInt, randomUUID } from 'node:crypto';
 import cors from 'cors';
+import jwt from 'jsonwebtoken';
 import express from 'express';
 import { config } from './config.mjs';
 import { db } from './db.mjs';
@@ -2388,90 +2389,102 @@ app.delete('/api/admin/backups/:backupId', requireAdmin, asyncRoute(async (req, 
 }));
 
 // =============================================
-// 家长端 API（微信小程序）
+// 家长端 API（微信小程序）- 账号密码登录
 // =============================================
 
-const parentAccessLimiter = createRateLimiter({
+const DEFAULT_PARENT_PASSWORD = '123456';
+
+const parentApiLimiter = createRateLimiter({
   windowMs: 60 * 1000,
   maxRequests: 30,
   message: '请求过于频繁，请稍后再试',
 });
 
+const parentLoginLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  maxRequests: 20,
+  message: '登录尝试过于频繁，请稍后再试',
+});
+
 // 准备语句
-const selectAccessCodeByCodeStmt = db.prepare(`
-  SELECT pac.*, s.name AS student_name, s.pet_id, s.pet_stage, s.food_count,
-         s.pet_nickname, s.spent_food, s.group_id,
-         c.title AS class_title, c.stage_thresholds, c.theme_id, c.rewards, c.score_items
-  FROM parent_access_codes pac
-  JOIN students s ON s.id = pac.student_id
-  JOIN classes c ON c.id = pac.class_id
-  WHERE pac.code = ? AND pac.is_active = TRUE
+const selectParentAccountsByClassStmt = db.prepare(`
+  SELECT pa.*, s.name AS student_name
+  FROM parent_accounts pa
+  JOIN students s ON s.id = pa.student_id
+  WHERE pa.class_id = ?
+  ORDER BY s.sort_order ASC, pa.created_at ASC
 `);
-const selectAccessCodesByStudentStmt = db.prepare(`
-  SELECT * FROM parent_access_codes
-  WHERE student_id = ?
-  ORDER BY created_at DESC
+const selectParentAccountByIdStmt = db.prepare(`
+  SELECT * FROM parent_accounts WHERE id = ?
 `);
-const selectAccessCodesByClassStmt = db.prepare(`
-  SELECT pac.*, s.name AS student_name
-  FROM parent_access_codes pac
-  JOIN students s ON s.id = pac.student_id
-  WHERE pac.class_id = ?
-  ORDER BY s.sort_order ASC, pac.created_at DESC
+const insertParentAccountStmt = db.prepare(`
+  INSERT INTO parent_accounts (id, student_id, class_id, username, password_hash, is_enabled, created_at, updated_at)
+  VALUES (?, ?, ?, ?, ?, TRUE, ?, ?)
 `);
-const insertAccessCodeStmt = db.prepare(`
-  INSERT INTO parent_access_codes (id, student_id, class_id, code, is_active, created_at)
-  VALUES (?, ?, ?, ?, TRUE, ?)
+const updateParentPasswordStmt = db.prepare(`
+  UPDATE parent_accounts SET password_hash = ?, updated_at = ? WHERE id = ?
 `);
-const deactivateAccessCodeStmt = db.prepare(`
-  UPDATE parent_access_codes SET is_active = FALSE WHERE id = ?
-`);
-const touchAccessCodeStmt = db.prepare(`
-  UPDATE parent_access_codes SET last_used_at = ? WHERE id = ?
+const deleteParentAccountStmt = db.prepare(`
+  DELETE FROM parent_accounts WHERE id = ?
 `);
 
-// 生成6位家长查看码
-const generateParentCode = () => {
-  const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
-  return Array.from({ length: 6 }, () => chars[randomInt(0, chars.length)]).join('');
+// 家长 JWT：单独签发，payload 含 parentAccountId + studentId + classId
+const signParentToken = (account) => {
+  return jwt.sign(
+    { parentAccountId: account.id, studentId: account.student_id, classId: account.class_id, role: 'parent' },
+    config.jwtSecret,
+    { expiresIn: '90d' }
+  );
 };
 
-// 教师：为学生生成家长查看码
-app.post('/api/parent-codes/student/:studentId', requireUser, writeLimiter, asyncRoute(async (req, res) => {
-  const { studentId } = req.params;
-  const userId = req.auth.userRow.id;
+// 家长鉴权中间件
+const requireParent = async (req, res, next) => {
+  try {
+    const header = req.get('authorization') || '';
+    if (!header.toLowerCase().startsWith('bearer ')) {
+      throw new HttpError(401, '请先登录');
+    }
+    const token = header.slice(7).trim();
 
-  // 验证学生归属
-  const student = await db.prepare(`
-    SELECT s.*, c.user_id, c.id AS class_id
-    FROM students s
-    JOIN classes c ON c.id = s.class_id
-    WHERE s.id = ? AND c.user_id = ?
-  `).get(studentId, userId);
+    let payload;
+    try {
+      payload = jwt.verify(token, config.jwtSecret);
+    } catch {
+      throw new HttpError(401, '登录已过期，请重新登录');
+    }
 
-  if (!student) {
-    throw new HttpError(404, '学生不存在');
+    if (payload.role !== 'parent' || !payload.parentAccountId) {
+      throw new HttpError(401, '无效的登录凭证');
+    }
+
+    const account = await selectParentAccountByIdStmt.get(payload.parentAccountId);
+    if (!account || !account.is_enabled) {
+      throw new HttpError(401, '账号已被停用，请联系老师');
+    }
+
+    req.parentAuth = {
+      accountId: account.id,
+      studentId: account.student_id,
+      classId: account.class_id,
+      username: account.username,
+    };
+    next();
+  } catch (error) {
+    next(error);
   }
+};
 
-  // 生成唯一码（重试避免冲突）
-  let code;
-  for (let i = 0; i < 10; i++) {
-    code = generateParentCode();
-    const existing = await db.prepare('SELECT id FROM parent_access_codes WHERE code = ?').get(code);
-    if (!existing) break;
-    if (i === 9) throw new HttpError(500, '生成查看码失败，请重试');
-  }
+// ===== 教师端：管理家长账号 =====
 
-  const id = createId('pac');
-  await insertAccessCodeStmt.run(id, studentId, student.class_id, code, nowIso());
-
-  sendSuccess(res, { id, code, studentId, studentName: student.name }, 201);
-}));
-
-// 教师：批量为班级所有学生生成查看码
-app.post('/api/parent-codes/class/:classId/batch', requireUser, writeLimiter, asyncRoute(async (req, res) => {
+// 教师：一键为全班开通家长账号（已有账号的跳过）
+app.post('/api/parent-accounts/class/:classId/batch', requireUser, writeLimiter, asyncRoute(async (req, res) => {
   const { classId } = req.params;
   const userId = req.auth.userRow.id;
+  const defaultPassword = (req.body.defaultPassword || DEFAULT_PARENT_PASSWORD).toString().trim();
+
+  if (defaultPassword.length < 4) {
+    throw new HttpError(400, '密码至少4位');
+  }
 
   const classRow = await selectClassByIdAndUserStmt.get(classId, userId);
   if (!classRow) {
@@ -2480,39 +2493,34 @@ app.post('/api/parent-codes/class/:classId/batch', requireUser, writeLimiter, as
 
   const students = await selectStudentsByClassStmt.all(classId);
   const results = [];
+  const passwordHash = hashPassword(defaultPassword);
 
   await db.transaction(async () => {
     for (const student of students) {
-      // 检查是否已有活跃的查看码
+      // 检查是否已有账号
       const existing = await db.prepare(`
-        SELECT id, code FROM parent_access_codes
-        WHERE student_id = ? AND is_active = TRUE
+        SELECT id, username FROM parent_accounts
+        WHERE student_id = ? AND class_id = ?
         LIMIT 1
-      `).get(student.id);
+      `).get(student.id, classId);
 
       if (existing) {
-        results.push({ studentId: student.id, studentName: student.name, code: existing.code, existed: true });
+        results.push({ studentId: student.id, studentName: student.name, username: existing.username, existed: true });
         continue;
       }
 
-      let code;
-      for (let i = 0; i < 10; i++) {
-        code = generateParentCode();
-        const dup = await db.prepare('SELECT id FROM parent_access_codes WHERE code = ?').get(code);
-        if (!dup) break;
-      }
-
-      const id = createId('pac');
-      await insertAccessCodeStmt.run(id, student.id, classId, code, nowIso());
-      results.push({ studentId: student.id, studentName: student.name, code, existed: false });
+      const id = createId('pa');
+      const timestamp = nowIso();
+      await insertParentAccountStmt.run(id, student.id, classId, student.name, passwordHash, timestamp, timestamp);
+      results.push({ studentId: student.id, studentName: student.name, username: student.name, existed: false });
     }
   })();
 
-  sendSuccess(res, { codes: results });
+  sendSuccess(res, { accounts: results, defaultPassword });
 }));
 
-// 教师：查看班级的所有查看码
-app.get('/api/parent-codes/class/:classId', requireUser, asyncRoute(async (req, res) => {
+// 教师：查看班级家长账号列表
+app.get('/api/parent-accounts/class/:classId', requireUser, asyncRoute(async (req, res) => {
   const { classId } = req.params;
   const userId = req.auth.userRow.id;
 
@@ -2521,48 +2529,135 @@ app.get('/api/parent-codes/class/:classId', requireUser, asyncRoute(async (req, 
     throw new HttpError(404, '班级不存在');
   }
 
-  const codes = await selectAccessCodesByClassStmt.all(classId);
-  sendSuccess(res, { codes });
+  const accounts = await selectParentAccountsByClassStmt.all(classId);
+  sendSuccess(res, {
+    accounts: accounts.map(a => ({
+      id: a.id,
+      studentId: a.student_id,
+      studentName: a.student_name,
+      username: a.username,
+      isEnabled: a.is_enabled,
+      lastLoginAt: a.last_login_at,
+      createdAt: a.created_at,
+    })),
+  });
 }));
 
-// 教师：停用某个查看码
-app.delete('/api/parent-codes/:codeId', requireUser, writeLimiter, asyncRoute(async (req, res) => {
-  const { codeId } = req.params;
+// 教师：重置某个家长账号密码
+app.post('/api/parent-accounts/:accountId/reset-password', requireUser, writeLimiter, asyncRoute(async (req, res) => {
+  const { accountId } = req.params;
   const userId = req.auth.userRow.id;
+  const newPassword = (req.body.password || DEFAULT_PARENT_PASSWORD).toString().trim();
 
-  const codeRow = await db.prepare(`
-    SELECT pac.* FROM parent_access_codes pac
-    JOIN classes c ON c.id = pac.class_id
-    WHERE pac.id = ? AND c.user_id = ?
-  `).get(codeId, userId);
+  const account = await db.prepare(`
+    SELECT pa.* FROM parent_accounts pa
+    JOIN classes c ON c.id = pa.class_id
+    WHERE pa.id = ? AND c.user_id = ?
+  `).get(accountId, userId);
 
-  if (!codeRow) {
-    throw new HttpError(404, '查看码不存在');
+  if (!account) {
+    throw new HttpError(404, '账号不存在');
   }
 
-  await deactivateAccessCodeStmt.run(codeId);
+  await updateParentPasswordStmt.run(hashPassword(newPassword), nowIso(), accountId);
+  sendSuccess(res, { password: newPassword });
+}));
+
+// 教师：删除家长账号
+app.delete('/api/parent-accounts/:accountId', requireUser, writeLimiter, asyncRoute(async (req, res) => {
+  const { accountId } = req.params;
+  const userId = req.auth.userRow.id;
+
+  const account = await db.prepare(`
+    SELECT pa.* FROM parent_accounts pa
+    JOIN classes c ON c.id = pa.class_id
+    WHERE pa.id = ? AND c.user_id = ?
+  `).get(accountId, userId);
+
+  if (!account) {
+    throw new HttpError(404, '账号不存在');
+  }
+
+  await deleteParentAccountStmt.run(accountId);
   sendSuccess(res, {});
 }));
 
-// ===== 家长端公开接口（无需登录，通过查看码访问） =====
+// ===== 家长端接口 =====
 
-// 家长：通过查看码获取学生信息
-app.get('/api/parent/student', parentAccessLimiter, asyncRoute(async (req, res) => {
-  const code = (req.query.code || '').toString().trim().toUpperCase();
-  if (!code || code.length !== 6) {
-    throw new HttpError(400, '请输入正确的查看码');
+// 家长登录：班级ID + 学生姓名 + 密码
+app.post('/api/parent/login', parentLoginLimiter, asyncRoute(async (req, res) => {
+  const { classId, username, password } = req.body || {};
+
+  if (!classId || !username || !password) {
+    throw new HttpError(400, '请填写完整的登录信息');
   }
 
-  const data = await selectAccessCodeByCodeStmt.get(code);
+  const account = await db.prepare(`
+    SELECT * FROM parent_accounts
+    WHERE class_id = ? AND username = ? AND is_enabled = TRUE
+  `).get(classId, username.toString().trim());
+
+  if (!account) {
+    throw new HttpError(401, '账号不存在或已被停用');
+  }
+
+  if (!verifyPassword(password.toString(), account.password_hash)) {
+    throw new HttpError(401, '密码错误');
+  }
+
+  // 更新最后登录时间
+  await db.prepare('UPDATE parent_accounts SET last_login_at = ? WHERE id = ?').run(nowIso(), account.id);
+
+  const token = signParentToken(account);
+
+  // 获取班级标题
+  const classRow = await selectClassByIdStmt.get(classId);
+
+  sendSuccess(res, {
+    token,
+    studentId: account.student_id,
+    classId: account.class_id,
+    username: account.username,
+    classTitle: classRow?.title || '',
+  });
+}));
+
+// 家长：修改自己的密码
+app.post('/api/parent/change-password', requireParent, parentApiLimiter, asyncRoute(async (req, res) => {
+  const { oldPassword, newPassword } = req.body || {};
+
+  if (!oldPassword || !newPassword) {
+    throw new HttpError(400, '请填写旧密码和新密码');
+  }
+  if (newPassword.toString().length < 4) {
+    throw new HttpError(400, '新密码至少4位');
+  }
+
+  const account = await selectParentAccountByIdStmt.get(req.parentAuth.accountId);
+  if (!verifyPassword(oldPassword.toString(), account.password_hash)) {
+    throw new HttpError(401, '旧密码错误');
+  }
+
+  await updateParentPasswordStmt.run(hashPassword(newPassword.toString()), nowIso(), account.id);
+  sendSuccess(res, {});
+}));
+
+// 家长：获取学生信息
+app.get('/api/parent/student', requireParent, parentApiLimiter, asyncRoute(async (req, res) => {
+  const { studentId, classId } = req.parentAuth;
+
+  const data = await db.prepare(`
+    SELECT s.*, c.title AS class_title, c.stage_thresholds, c.theme_id, c.rewards, c.score_items
+    FROM students s
+    JOIN classes c ON c.id = s.class_id
+    WHERE s.id = ? AND s.class_id = ?
+  `).get(studentId, classId);
+
   if (!data) {
-    throw new HttpError(404, '查看码无效或已过期');
+    throw new HttpError(404, '学生信息不存在');
   }
-
-  // 更新最后使用时间
-  await touchAccessCodeStmt.run(nowIso(), data.id);
 
   const thresholds = parseJson(data.stage_thresholds, DEFAULT_STAGE_THRESHOLDS);
-  const rewards = parseJson(data.rewards, DEFAULT_REWARDS);
   const scoreItems = parseJson(data.score_items, DEFAULT_SCORE_ITEMS);
 
   // 获取徽章
@@ -2570,12 +2665,12 @@ app.get('/api/parent/student', parentAccessLimiter, asyncRoute(async (req, res) 
     SELECT * FROM badges
     WHERE student_id = ?
     ORDER BY earned_at DESC
-  `).all(data.student_id);
+  `).all(studentId);
 
   sendSuccess(res, {
     student: {
-      id: data.student_id,
-      name: data.student_name,
+      id: data.id,
+      name: data.name,
       petId: data.pet_id,
       petStage: data.pet_stage,
       foodCount: data.food_count,
@@ -2598,16 +2693,8 @@ app.get('/api/parent/student', parentAccessLimiter, asyncRoute(async (req, res) 
 }));
 
 // 家长：获取学生的积分记录
-app.get('/api/parent/history', parentAccessLimiter, asyncRoute(async (req, res) => {
-  const code = (req.query.code || '').toString().trim().toUpperCase();
-  if (!code || code.length !== 6) {
-    throw new HttpError(400, '请输入正确的查看码');
-  }
-
-  const data = await selectAccessCodeByCodeStmt.get(code);
-  if (!data) {
-    throw new HttpError(404, '查看码无效或已过期');
-  }
+app.get('/api/parent/history', requireParent, parentApiLimiter, asyncRoute(async (req, res) => {
+  const { studentId, classId } = req.parentAuth;
 
   const page = Math.max(1, parseInt(req.query.page) || 1);
   const pageSize = Math.min(50, Math.max(1, parseInt(req.query.pageSize) || 20));
@@ -2618,12 +2705,12 @@ app.get('/api/parent/history', parentAccessLimiter, asyncRoute(async (req, res) 
     WHERE student_id = ? AND class_id = ? AND type IN ('checkin', 'redeem', 'graduate')
     ORDER BY timestamp DESC
     LIMIT ? OFFSET ?
-  `).all(data.student_id, data.class_id, pageSize, offset);
+  `).all(studentId, classId, pageSize, offset);
 
   const countResult = await db.prepare(`
     SELECT COUNT(*) AS total FROM history_records
     WHERE student_id = ? AND class_id = ? AND type IN ('checkin', 'redeem', 'graduate')
-  `).get(data.student_id, data.class_id);
+  `).get(studentId, classId);
 
   sendSuccess(res, {
     records: records.map(r => ({
@@ -2646,31 +2733,42 @@ app.get('/api/parent/history', parentAccessLimiter, asyncRoute(async (req, res) 
 }));
 
 // 家长：获取学生排名信息
-app.get('/api/parent/ranking', parentAccessLimiter, asyncRoute(async (req, res) => {
-  const code = (req.query.code || '').toString().trim().toUpperCase();
-  if (!code || code.length !== 6) {
-    throw new HttpError(400, '请输入正确的查看码');
-  }
+app.get('/api/parent/ranking', requireParent, parentApiLimiter, asyncRoute(async (req, res) => {
+  const { studentId, classId } = req.parentAuth;
 
-  const data = await selectAccessCodeByCodeStmt.get(code);
-  if (!data) {
-    throw new HttpError(404, '查看码无效或已过期');
-  }
-
-  // 获取班级所有学生的积分排名
   const allStudents = await db.prepare(`
     SELECT id, name, food_count FROM students
     WHERE class_id = ?
     ORDER BY food_count DESC
-  `).all(data.class_id);
+  `).all(classId);
 
-  const rank = allStudents.findIndex(s => s.id === data.student_id) + 1;
+  const rank = allStudents.findIndex(s => s.id === studentId) + 1;
   const total = allStudents.length;
+  const student = allStudents.find(s => s.id === studentId);
 
   sendSuccess(res, {
     rank,
     total,
-    studentFoodCount: data.food_count,
+    studentFoodCount: student?.food_count || 0,
+  });
+}));
+
+// 家长：通过班级标题搜索班级（用于登录时选择班级）
+app.get('/api/parent/classes', parentApiLimiter, asyncRoute(async (req, res) => {
+  const keyword = (req.query.keyword || '').toString().trim();
+  if (!keyword) {
+    throw new HttpError(400, '请输入班级名称');
+  }
+
+  const classes = await db.prepare(`
+    SELECT id, title FROM classes
+    WHERE title LIKE ?
+    ORDER BY created_at DESC
+    LIMIT 20
+  `).all(`%${keyword}%`);
+
+  sendSuccess(res, {
+    classes: classes.map(c => ({ id: c.id, title: c.title })),
   });
 }));
 

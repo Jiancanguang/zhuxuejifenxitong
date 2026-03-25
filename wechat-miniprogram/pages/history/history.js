@@ -31,8 +31,7 @@ Page({
   },
 
   async loadRecords() {
-    const code = app.globalData.accessCode;
-    if (!code) {
+    if (!app.globalData.token) {
       wx.redirectTo({ url: '/pages/index/index' });
       return;
     }
@@ -40,7 +39,7 @@ Page({
     this.setData({ loading: true, error: '' });
 
     try {
-      const data = await api.getStudentHistory(code, 1, this.data.pageSize);
+      const data = await api.getStudentHistory(1, this.data.pageSize);
       const records = this.formatRecords(data.records || []);
 
       this.setData({
@@ -61,8 +60,7 @@ Page({
     this.setData({ loadingMore: true });
 
     try {
-      const code = app.globalData.accessCode;
-      const data = await api.getStudentHistory(code, nextPage, this.data.pageSize);
+      const data = await api.getStudentHistory(nextPage, this.data.pageSize);
       const newRecords = this.formatRecords(data.records || []);
 
       this.setData({

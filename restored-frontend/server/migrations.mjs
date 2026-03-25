@@ -208,6 +208,33 @@ const migrations = [
       `);
     },
   },
+  {
+    id: '006_add_parent_accounts',
+    up: async (db) => {
+      // 家长账号表：账号=学生姓名，密码由老师统一设置
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS parent_accounts (
+          id TEXT PRIMARY KEY,
+          student_id TEXT NOT NULL,
+          class_id TEXT NOT NULL,
+          username TEXT NOT NULL,
+          password_hash TEXT NOT NULL,
+          is_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          last_login_at TEXT,
+          FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+          FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_parent_accounts_student ON parent_accounts(student_id);
+        CREATE INDEX IF NOT EXISTS idx_parent_accounts_class ON parent_accounts(class_id);
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_parent_accounts_class_username ON parent_accounts(class_id, username);
+
+        DROP TABLE IF EXISTS parent_access_codes;
+      `);
+    },
+  },
 ];
 
 const ensureMigrationsTable = async (db) => {

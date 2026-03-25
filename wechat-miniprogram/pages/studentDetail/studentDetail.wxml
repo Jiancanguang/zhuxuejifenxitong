@@ -10,8 +10,8 @@
         <view class="student-name">{{student.name}}</view>
         <view class="class-name">{{classInfo.title}}</view>
       </view>
-      <view class="unbind-btn" bindtap="handleUnbind">
-        <text class="unbind-text">解绑</text>
+      <view class="unbind-btn" bindtap="handleLogout">
+        <text class="unbind-text">退出</text>
       </view>
     </view>
   </view>

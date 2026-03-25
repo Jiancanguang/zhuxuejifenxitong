@@ -1,16 +1,31 @@
 # 助学积分系统 - 微信小程序（家长端）
 
-家长通过微信小程序查看孩子的课堂积分、宠物成长和荣誉徽章。
+家长通过微信小程序，使用**学生姓名 + 密码**登录查看孩子的课堂积分、宠物成长和荣誉徽章。
 
 ## 功能
 
-- 输入查看码绑定学生
+- 搜索班级 → 输入学生姓名和密码登录
 - 查看积分总数和可用积分
 - 查看宠物成长阶段和进度
 - 查看班级排名
 - 查看完整积分记录（支持分页加载）
 - 查看荣誉徽章墙
+- 修改密码
 - 下拉刷新数据
+
+## 使用流程
+
+### 教师端
+1. 在系统工具栏点击 **「家长码」** 按钮
+2. 设置统一初始密码（默认 `123456`）
+3. 点击 **「一键开通全班账号」**
+4. 点击「导出」下载账号信息，打印分发给家长
+
+### 家长端
+1. 打开微信小程序
+2. 搜索并选择孩子所在的班级
+3. 输入**学生姓名**和老师提供的**密码**
+4. 登录后即可查看积分详情
 
 ## 部署步骤
 
@@ -43,20 +58,22 @@ globalData: {
 确保你的服务器（腾讯云）已经：
 
 1. 配置了域名和 SSL 证书（HTTPS）
-2. 在 `.env` 中配置了 `CORS_ORIGIN`，添加小程序的 servicewechat.com 域名
-3. 运行了最新版本的后端代码（包含家长端 API）
+2. 运行了最新版本的后端代码（包含家长端 API）
 
-服务器端新增的 API 端点：
+服务器端 API 端点：
 
 | 端点 | 说明 |
 |------|------|
-| `POST /api/parent-codes/student/:id` | 为学生生成查看码 |
-| `POST /api/parent-codes/class/:id/batch` | 批量生成全班查看码 |
-| `GET /api/parent-codes/class/:id` | 获取班级所有查看码 |
-| `DELETE /api/parent-codes/:id` | 停用查看码 |
-| `GET /api/parent/student?code=XXX` | 家长查看学生信息 |
-| `GET /api/parent/history?code=XXX` | 家长查看积分记录 |
-| `GET /api/parent/ranking?code=XXX` | 家长查看排名 |
+| `POST /api/parent-accounts/class/:id/batch` | 批量开通全班家长账号 |
+| `GET /api/parent-accounts/class/:id` | 获取班级家长账号列表 |
+| `POST /api/parent-accounts/:id/reset-password` | 重置家长密码 |
+| `DELETE /api/parent-accounts/:id` | 删除家长账号 |
+| `GET /api/parent/classes?keyword=XXX` | 搜索班级 |
+| `POST /api/parent/login` | 家长登录 |
+| `POST /api/parent/change-password` | 修改密码 |
+| `GET /api/parent/student` | 获取学生信息（需 token） |
+| `GET /api/parent/history` | 获取积分记录（需 token） |
+| `GET /api/parent/ranking` | 获取排名（需 token） |
 
 ### 5. 使用微信开发者工具
 
@@ -66,13 +83,6 @@ globalData: {
 4. 开发时可在「详情 > 本地设置」中勾选「不校验合法域名」方便调试
 5. 点击「预览」生成二维码在手机上测试
 6. 测试通过后点击「上传」提交审核
-
-### 6. 教师端使用
-
-1. 在教师端系统中，点击工具栏的 **「家长码」** 按钮
-2. 点击 **「一键生成全班查看码」**
-3. 将查看码分发给对应学生的家长
-4. 可以点击「导出」下载全班查看码列表
 
 ## 开发调试
 
@@ -88,17 +98,17 @@ apiBaseUrl: 'http://localhost:3001'
 
 ```
 wechat-miniprogram/
-├── app.js              # 小程序入口
+├── app.js              # 小程序入口（含登录状态管理）
 ├── app.json            # 全局配置
 ├── app.wxss            # 全局样式
 ├── project.config.json # 项目配置
 ├── utils/
-│   ├── api.js          # API 请求封装
+│   ├── api.js          # API 请求封装（含 token 鉴权）
 │   └── util.js         # 工具函数
 └── pages/
-    ├── index/          # 首页（引导绑定）
-    ├── bindStudent/    # 输入查看码页
-    ├── studentDetail/  # 学生详情（主页面）
-    ├── history/        # 积分记录
+    ├── index/          # 首页（引导登录）
+    ├── bindStudent/    # 登录页（搜索班级 + 输入姓名密码）
+    ├── studentDetail/  # 学生详情（主页面：积分/宠物/排名）
+    ├── history/        # 积分记录（分页加载）
     └── badges/         # 徽章墙
 ```

@@ -8,11 +8,11 @@
   </view>
 
   <view class="action-area">
-    <button class="btn-primary bind-btn" bindtap="goToBind">
-      输入查看码
+    <button class="btn-primary bind-btn" bindtap="goToLogin">
+      登录查看
     </button>
     <view class="hint">
-      请向老师获取您孩子的专属查看码
+      使用孩子的姓名和密码登录
     </view>
   </view>
 

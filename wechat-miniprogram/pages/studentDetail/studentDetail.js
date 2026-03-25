@@ -14,15 +14,16 @@ Page({
     stageName: '',
     nextThreshold: 0,
     recentRecords: [],
+    username: '',
   },
 
   onLoad() {
+    this.setData({ username: app.globalData.username || '' });
     this.loadData();
   },
 
   onShow() {
-    // 每次显示时刷新数据
-    if (!this.data.loading && app.globalData.accessCode) {
+    if (!this.data.loading && app.globalData.token) {
       this.loadData();
     }
   },
@@ -34,8 +35,8 @@ Page({
   },
 
   async loadData() {
-    const code = app.globalData.accessCode;
-    if (!code) {
+    const token = app.globalData.token;
+    if (!token) {
       wx.redirectTo({ url: '/pages/index/index' });
       return;
     }
@@ -43,11 +44,10 @@ Page({
     this.setData({ loading: true, error: '' });
 
     try {
-      // 并行请求学生信息和排名
       const [studentData, rankingData, historyData] = await Promise.all([
-        api.getStudentByCode(code),
-        api.getStudentRanking(code),
-        api.getStudentHistory(code, 1, 5),
+        api.getStudentInfo(),
+        api.getStudentRanking(),
+        api.getStudentHistory(1, 5),
       ]);
 
       const { student, badges } = studentData;
@@ -58,7 +58,6 @@ Page({
       const stageName = util.getStageName(stage);
       const nextThreshold = stage < thresholds.length ? thresholds[stage] : thresholds[thresholds.length - 1];
 
-      // 处理最近记录
       const recentRecords = (historyData.records || []).map(r => ({
         ...r,
         typeText: util.getRecordTypeText(r.type),
@@ -76,20 +75,16 @@ Page({
         classInfo,
         badges,
         ranking: rankingData,
-        stageProgress: progress,
+        stageProgress: Math.round(progress),
         stageName,
         nextThreshold,
         recentRecords,
       });
 
-      // 缓存数据
       app.globalData.studentData = studentData;
     } catch (err) {
-      if (err.message.includes('无效') || err.message.includes('过期')) {
-        // 查看码失效，清除缓存
-        app.globalData.accessCode = '';
-        app.globalData.studentData = null;
-        wx.removeStorageSync('parentAccessCode');
+      if (err.message.includes('过期') || err.message.includes('重新登录')) {
+        app.clearLogin();
         wx.redirectTo({ url: '/pages/index/index' });
         return;
       }
@@ -105,16 +100,14 @@ Page({
     wx.navigateTo({ url: '/pages/badges/badges' });
   },
 
-  handleUnbind() {
+  handleLogout() {
     wx.showModal({
-      title: '解除绑定',
-      content: '解除绑定后需重新输入查看码才能查看，确定解除吗？',
+      title: '退出登录',
+      content: '退出后需重新登录，确定退出吗？',
       confirmColor: '#ef4444',
       success: (res) => {
         if (res.confirm) {
-          app.globalData.accessCode = '';
-          app.globalData.studentData = null;
-          wx.removeStorageSync('parentAccessCode');
+          app.clearLogin();
           wx.redirectTo({ url: '/pages/index/index' });
         }
       },

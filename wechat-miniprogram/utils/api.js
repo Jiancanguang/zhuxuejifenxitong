@@ -8,18 +8,31 @@ const app = getApp();
  * 发起 API 请求
  */
 function request(options) {
-  const { path, method = 'GET', data = {} } = options;
+  const { path, method = 'GET', data = {}, needAuth = false } = options;
   const baseUrl = app.globalData.apiBaseUrl;
+  const header = { 'Content-Type': 'application/json' };
+
+  if (needAuth) {
+    const token = app.globalData.token;
+    if (token) {
+      header['Authorization'] = `Bearer ${token}`;
+    }
+  }
 
   return new Promise((resolve, reject) => {
     wx.request({
       url: `${baseUrl}${path}`,
       method,
       data,
-      header: {
-        'Content-Type': 'application/json',
-      },
+      header,
       success(res) {
+        if (res.statusCode === 401) {
+          // token 过期，清除登录状态
+          app.globalData.token = '';
+          wx.removeStorageSync('parentToken');
+          reject(new Error('登录已过期，请重新登录'));
+          return;
+        }
         if (res.statusCode >= 200 && res.statusCode < 300 && res.data.success) {
           resolve(res.data.data);
         } else {
@@ -35,38 +48,77 @@ function request(options) {
 }
 
 /**
- * 通过查看码获取学生信息
+ * 搜索班级
  */
-function getStudentByCode(code) {
+function searchClasses(keyword) {
   return request({
-    path: `/api/parent/student?code=${encodeURIComponent(code)}`,
+    path: `/api/parent/classes?keyword=${encodeURIComponent(keyword)}`,
     method: 'GET',
+  });
+}
+
+/**
+ * 家长登录
+ */
+function login(classId, username, password) {
+  return request({
+    path: '/api/parent/login',
+    method: 'POST',
+    data: { classId, username, password },
+  });
+}
+
+/**
+ * 通过 token 获取学生信息
+ */
+function getStudentInfo() {
+  return request({
+    path: '/api/parent/student',
+    method: 'GET',
+    needAuth: true,
   });
 }
 
 /**
  * 获取学生积分记录
  */
-function getStudentHistory(code, page = 1, pageSize = 20) {
+function getStudentHistory(page = 1, pageSize = 20) {
   return request({
-    path: `/api/parent/history?code=${encodeURIComponent(code)}&page=${page}&pageSize=${pageSize}`,
+    path: `/api/parent/history?page=${page}&pageSize=${pageSize}`,
     method: 'GET',
+    needAuth: true,
   });
 }
 
 /**
  * 获取学生排名
  */
-function getStudentRanking(code) {
+function getStudentRanking() {
   return request({
-    path: `/api/parent/ranking?code=${encodeURIComponent(code)}`,
+    path: '/api/parent/ranking',
     method: 'GET',
+    needAuth: true,
+  });
+}
+
+/**
+ * 修改密码
+ */
+function changePassword(oldPassword, newPassword) {
+  return request({
+    path: '/api/parent/change-password',
+    method: 'POST',
+    data: { oldPassword, newPassword },
+    needAuth: true,
   });
 }
 
 module.exports = {
   request,
-  getStudentByCode,
+  searchClasses,
+  login,
+  getStudentInfo,
   getStudentHistory,
   getStudentRanking,
+  changePassword,
 };

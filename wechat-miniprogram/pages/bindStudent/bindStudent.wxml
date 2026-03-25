@@ -1,40 +1,119 @@
-<!--绑定学生-->
+<!--登录页-->
 <view class="container">
-  <view class="bind-card">
-    <view class="bind-icon">&#x1F511;</view>
-    <view class="bind-title">输入查看码</view>
-    <view class="bind-desc">请输入老师提供的6位查看码</view>
 
-    <view class="input-wrapper">
-      <input
-        class="code-input"
-        type="text"
-        maxlength="6"
-        placeholder="请输入查看码"
-        value="{{code}}"
-        bindinput="onCodeInput"
-        confirm-type="done"
-        bindconfirm="onSubmit"
-        auto-focus
-      />
+  <!-- 步骤1: 搜索班级 -->
+  <view wx:if="{{step === 1}}">
+    <view class="login-card">
+      <view class="login-icon">&#x1F3EB;</view>
+      <view class="login-title">选择班级</view>
+      <view class="login-desc">请输入班级名称搜索</view>
+
+      <view class="input-group">
+        <input
+          class="form-input"
+          type="text"
+          placeholder="输入班级名称，如：高三1班"
+          value="{{classKeyword}}"
+          bindinput="onClassKeywordInput"
+          confirm-type="search"
+          bindconfirm="handleSearchClass"
+        />
+        <button
+          class="btn-primary search-btn"
+          bindtap="handleSearchClass"
+          disabled="{{searchLoading}}"
+          loading="{{searchLoading}}"
+        >
+          搜索
+        </button>
+      </view>
+
+      <view class="error-text" wx:if="{{error && step === 1}}">{{error}}</view>
+
+      <!-- 搜索结果 -->
+      <view class="class-list" wx:if="{{classList.length > 0}}">
+        <view
+          class="class-item"
+          wx:for="{{classList}}"
+          wx:key="id"
+          bindtap="handleSelectClass"
+          data-item="{{item}}"
+        >
+          <text class="class-item-icon">&#x1F4DA;</text>
+          <text class="class-item-title">{{item.title}}</text>
+          <text class="class-item-arrow">></text>
+        </view>
+      </view>
+
+      <view class="no-result" wx:if="{{searchDone && classList.length === 0 && !error}}">
+        未找到匹配的班级
+      </view>
+    </view>
+  </view>
+
+  <!-- 步骤2: 输入账号密码 -->
+  <view wx:if="{{step === 2}}">
+    <view class="login-card">
+      <view class="back-row" bindtap="handleBackToSearch">
+        <text class="back-arrow">&lt;</text>
+        <text class="back-text">重新选择班级</text>
+      </view>
+
+      <view class="selected-class">
+        <text class="selected-class-icon">&#x1F3EB;</text>
+        <text class="selected-class-title">{{selectedClass.title}}</text>
+      </view>
+
+      <view class="login-title" style="margin-top: 32rpx">登录</view>
+      <view class="login-desc">输入学生姓名和密码</view>
+
+      <view class="input-group">
+        <view class="input-label">学生姓名</view>
+        <input
+          class="form-input"
+          type="text"
+          placeholder="请输入学生姓名"
+          value="{{username}}"
+          bindinput="onUsernameInput"
+        />
+      </view>
+
+      <view class="input-group">
+        <view class="input-label">密码</view>
+        <view class="password-wrapper">
+          <input
+            class="form-input password-input"
+            type="{{showPassword ? 'text' : 'password'}}"
+            placeholder="请输入密码"
+            value="{{password}}"
+            bindinput="onPasswordInput"
+            confirm-type="done"
+            bindconfirm="handleLogin"
+          />
+          <view class="password-toggle" bindtap="toggleShowPassword">
+            <text>{{showPassword ? '隐藏' : '显示'}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="error-text" wx:if="{{error && step === 2}}">{{error}}</view>
+
+      <button
+        class="btn-primary login-btn"
+        bindtap="handleLogin"
+        disabled="{{loginLoading}}"
+        loading="{{loginLoading}}"
+      >
+        {{loginLoading ? '登录中...' : '登录'}}
+      </button>
     </view>
 
-    <view class="error-text" wx:if="{{error}}">{{error}}</view>
-
-    <button
-      class="btn-primary submit-btn"
-      bindtap="onSubmit"
-      disabled="{{loading || code.length < 6}}"
-      loading="{{loading}}"
-    >
-      {{loading ? '验证中...' : '确认绑定'}}
-    </button>
+    <view class="tips">
+      <view class="tips-title">提示</view>
+      <view class="tips-item">· 账号为学生姓名，初始密码由老师提供</view>
+      <view class="tips-item">· 登录后可以修改密码</view>
+      <view class="tips-item">· 如忘记密码请联系老师重置</view>
+    </view>
   </view>
 
-  <view class="tips">
-    <view class="tips-title">如何获取查看码？</view>
-    <view class="tips-item">1. 联系孩子的老师</view>
-    <view class="tips-item">2. 老师在系统中生成家长查看码</view>
-    <view class="tips-item">3. 每个学生有独立的查看码</view>
-  </view>
 </view>

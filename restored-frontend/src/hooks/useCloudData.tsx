@@ -148,49 +148,63 @@ export function useCloudData(): CloudDataState & CloudDataActions {
     loadInitialData();
   }, []);
 
-  // 加载初始数据
-  const loadInitialData = async () => {
+  // 加载初始数据（带自动重试）
+  const loadInitialData = async (retries = 2) => {
     setIsLoading(true);
     setError(null);
 
-    try {
-      // 从云端加载班级数据
-      const remoteClasses = await dataService.fetchClasses();
-      const classes: Record<string, ClassState> = {};
-      Object.entries(remoteClasses).forEach(([classId, cls]) => {
-        classes[classId] = normalizeClassState(cls);
-      });
+    let lastError: any = null;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        if (attempt > 0) {
+          // 重试前等待，指数退避
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+          console.log(`[CloudData] 第 ${attempt + 1} 次尝试加载数据...`);
+        }
 
-      // 获取用户设置
-      const user = authService.getCurrentUser();
-      const systemTitle = user?.systemTitle || DEFAULT_SYSTEM_TITLE;
-      let currentClassId = user?.currentClassId || '';
+        // 从云端加载班级数据
+        const remoteClasses = await dataService.fetchClasses();
+        const classes: Record<string, ClassState> = {};
+        Object.entries(remoteClasses).forEach(([classId, cls]) => {
+          classes[classId] = normalizeClassState(cls);
+        });
 
-      // 如果没有班级，创建默认班级
-      if (Object.keys(classes).length === 0) {
-        const defaultClass = normalizeClassState(await dataService.createClass('默认班级'));
-        classes[defaultClass.id] = defaultClass;
-        currentClassId = defaultClass.id;
+        // 获取用户设置
+        const user = authService.getCurrentUser();
+        const systemTitle = user?.systemTitle || DEFAULT_SYSTEM_TITLE;
+        let currentClassId = user?.currentClassId || '';
 
-        // 更新用户的当前班级 ID
-        await authService.updateUserSettings({ currentClassId });
-      } else if (!currentClassId || !classes[currentClassId]) {
-        // 如果当前班级 ID 无效，使用第一个班级
-        currentClassId = Object.keys(classes)[0];
-        await authService.updateUserSettings({ currentClassId });
+        // 如果没有班级，创建默认班级
+        if (Object.keys(classes).length === 0) {
+          const defaultClass = normalizeClassState(await dataService.createClass('默认班级'));
+          classes[defaultClass.id] = defaultClass;
+          currentClassId = defaultClass.id;
+
+          // 更新用户的当前班级 ID
+          await authService.updateUserSettings({ currentClassId });
+        } else if (!currentClassId || !classes[currentClassId]) {
+          // 如果当前班级 ID 无效，使用第一个班级
+          currentClassId = Object.keys(classes)[0];
+          await authService.updateUserSettings({ currentClassId });
+        }
+
+        setStore({
+          systemTitle,
+          currentClassId,
+          classes,
+        });
+        setIsLoading(false);
+        return; // 成功，直接返回
+      } catch (err: any) {
+        lastError = err;
+        console.error(`[CloudData] 加载数据失败 (尝试 ${attempt + 1}/${retries + 1}):`, err);
       }
-
-      setStore({
-        systemTitle,
-        currentClassId,
-        classes,
-      });
-    } catch (err) {
-      console.error('Failed to load data:', err);
-      setError('加载数据失败，请刷新页面重试');
-    } finally {
-      setIsLoading(false);
     }
+
+    // 所有重试都失败
+    const detail = lastError?.message || '';
+    setError(detail ? `加载数据失败：${detail}` : '加载数据失败，请刷新页面重试');
+    setIsLoading(false);
   };
 
   // 刷新数据

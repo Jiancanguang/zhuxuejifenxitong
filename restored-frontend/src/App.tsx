@@ -1677,12 +1677,20 @@ function MainApp() {
           </div>
           <h2 className="text-xl font-bold text-slate-800 mb-2">加载失败</h2>
           <p className="text-slate-500 mb-4">{dataError || '无法加载数据，请检查网络连接'}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-6 py-2 bg-pink-500 hover:bg-pink-600 text-white font-bold rounded-lg transition-colors"
-          >
-            重新加载
-          </button>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-2 bg-pink-500 hover:bg-pink-600 text-white font-bold rounded-lg transition-colors"
+            >
+              重新加载
+            </button>
+            <button
+              onClick={() => { logout(); }}
+              className="px-6 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold rounded-lg transition-colors"
+            >
+              退出登录
+            </button>
+          </div>
         </div>
       </div>
     );

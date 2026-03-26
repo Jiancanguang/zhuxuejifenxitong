@@ -4,7 +4,8 @@
   <view class="student-card">
     <view class="student-header">
       <view class="student-avatar">
-        <text class="avatar-emoji">🐾</text>
+        <image wx:if="{{petImageUrl}}" class="avatar-img" src="{{petImageUrl}}" mode="aspectFit" />
+        <text wx:else class="avatar-emoji">🐾</text>
       </view>
       <view class="student-info">
         <view class="student-name">{{student.name}}</view>
@@ -20,7 +21,8 @@
   <view class="pet-card">
     <view class="pet-header">
       <view class="pet-name-row">
-        <text class="pet-emoji">🐱</text>
+        <image wx:if="{{petImageUrl}}" class="pet-img" src="{{petImageUrl}}" mode="aspectFit" />
+        <text wx:else class="pet-emoji">🐱</text>
         <text class="pet-nickname" wx:if="{{student.petNickname}}">{{student.petNickname}}</text>
         <text class="pet-nickname" wx:else>我的宠物</text>
       </view>

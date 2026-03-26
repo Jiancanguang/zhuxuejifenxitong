@@ -1,5 +1,6 @@
 const api = require('../../utils/api');
 const util = require('../../utils/util');
+const pets = require('../../utils/pets');
 const app = getApp();
 
 Page({
@@ -13,6 +14,7 @@ Page({
     stageProgress: 0,
     stageName: '',
     nextThreshold: 0,
+    petImageUrl: '',
     recentRecords: [],
     username: '',
   },
@@ -58,6 +60,9 @@ Page({
       const stageName = util.getStageName(stage);
       const nextThreshold = stage < thresholds.length ? thresholds[stage] : thresholds[thresholds.length - 1];
 
+      // 宠物图片 URL
+      const petImageUrl = student.petId ? pets.getPetImageUrl(app.globalData.apiBaseUrl, student.petId, stage) : '';
+
       const recentRecords = (historyData.records || []).map(r => ({
         ...r,
         typeText: util.getRecordTypeText(r.type),
@@ -78,6 +83,7 @@ Page({
         stageProgress: Math.round(progress),
         stageName,
         nextThreshold,
+        petImageUrl,
         recentRecords,
       });
 

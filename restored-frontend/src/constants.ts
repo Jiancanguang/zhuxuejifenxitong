@@ -109,6 +109,18 @@ export const canGraduate = (food: number, thresholds: number[]): boolean => {
   return food >= thresholds[9]; // 达到第10阶段的阈值
 };
 
+// 计算当前宠物的阶段进度 = 累计食物 − 已毕业次数 × 毕业阈值
+// 每次毕业视为消耗了一轮宠物养成食物，新宠物从 0 开始
+export const getPetProgress = (foodCount: number, badgeCount: number, thresholds: number[]): number => {
+  const graduationCost = thresholds[9] || 0;
+  return Math.max(0, (foodCount || 0) - (badgeCount || 0) * graduationCost);
+};
+
+// 计算可用积分 = 累计食物 − 已消费食物
+export const getAvailableFood = (foodCount: number, spentFood: number): number => {
+  return Math.max(0, (foodCount || 0) - (spentFood || 0));
+};
+
 // 主题配置 - 全局主题系统
 export const THEMES = [
   {

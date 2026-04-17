@@ -28,7 +28,7 @@ import { AdminDashboard } from './components/admin/AdminDashboard';
 import { AdminUsers } from './components/admin/AdminUsers';
 import { AdminAuditLogs } from './components/admin/AdminAuditLogs';
 import { AdminBackups } from './components/admin/AdminBackups';
-import { THEMES, ALL_PETS, DEFAULT_SYSTEM_TITLE, REWARDS, DEFAULT_STAGE_THRESHOLDS, DEFAULT_SCORE_ITEMS, calculateStageFromFood, canGraduate, getPetById } from './constants';
+import { THEMES, ALL_PETS, DEFAULT_SYSTEM_TITLE, REWARDS, DEFAULT_STAGE_THRESHOLDS, DEFAULT_SCORE_ITEMS, calculateStageFromFood, canGraduate, getPetById, getPetProgress, getAvailableFood } from './constants';
 import { GlobalState, ClassState, Badge, PetBreed, HistoryRecord, Student, Group, RewardItem, ScoreItem, ReuseConfigField, StudentSortMode } from './types';
 import { matchesSearch, generateTestStudentNames } from './utils';
 import * as dataService from './services/data';
@@ -704,11 +704,13 @@ function MainApp() {
     const student = currentClass.students.find(s => s.id === studentId);
     const studentName = student ? student.name : 'Unknown';
 
-    // 计算当前食物数量（用于满级校验）
+    // 计算当前宠物阶段进度（用于满级校验，已毕业次数会抵消对应的食物量）
     const currentFood = currentClass.progress[studentId] || 0;
+    const badgeCount = (currentClass.badges[studentId] || []).length;
+    const petProgress = getPetProgress(currentFood, badgeCount, currentClass.stageThresholds);
 
-    // 检查满级状态：如果已满级且是加分操作，则不允许
-    if (scoreItem.score > 0 && canGraduate(currentFood, currentClass.stageThresholds)) {
+    // 检查满级状态：如果当前宠物已满级且是加分操作，则不允许
+    if (scoreItem.score > 0 && canGraduate(petProgress, currentClass.stageThresholds)) {
       showUndoToast(null, `⚠️ ${studentName} 已满级，请先收获徽章`);
       return;
     }
@@ -748,12 +750,14 @@ function MainApp() {
 
     const batchId = generateClientId('batch_score');
 
-    // 过滤掉已满级的学生（如果是加分操作）
+    // 过滤掉已满级的学生（如果是加分操作），以当前宠物阶段进度为准
     let validStudentIds = [...selectedStudentIds];
     if (scoreItem.score > 0) {
       validStudentIds = validStudentIds.filter(studentId => {
         const currentFood = currentClass.progress[studentId] || 0;
-        return !canGraduate(currentFood, currentClass.stageThresholds);
+        const badgeCount = (currentClass.badges[studentId] || []).length;
+        const petProgress = getPetProgress(currentFood, badgeCount, currentClass.stageThresholds);
+        return !canGraduate(petProgress, currentClass.stageThresholds);
       });
 
       if (validStudentIds.length === 0) {
@@ -2002,13 +2006,13 @@ function MainApp() {
             const petId = currentClass.petSelections[student.id];
             // 移除随机分配逻辑，允许 petId 为 undefined（蛋状态）
 
-            // 获取当前食物数量和阶段
+            // 当前宠物阶段进度（扣除已毕业的食物）+ 可用积分（扣除已消费的食物）
             const currentFood = currentClass.progress[student.id] || 0;
-            const petStage = currentClass.petStages?.[student.id] ||
-              calculateStageFromFood(currentFood, currentClass.stageThresholds);
+            const studentBadges = currentClass.badges[student.id] ?? EMPTY_BADGES;
+            const petProgress = getPetProgress(currentFood, studentBadges.length, currentClass.stageThresholds);
+            const availablePoints = getAvailableFood(currentFood, student.spentFood || 0);
+            const petStage = calculateStageFromFood(petProgress, currentClass.stageThresholds);
 
-            // 检查是否可以毕业
-            const isReadyToGraduate = canGraduate(currentFood, currentClass.stageThresholds);
             const group = student.groupId ? groupsById.get(student.groupId) : undefined;
 
               return (
@@ -2016,9 +2020,10 @@ function MainApp() {
                   key={student.id}
                   studentId={student.id}
                   name={student.name}
-                  currentCount={currentFood}
+                  currentCount={petProgress}
+                  availablePoints={availablePoints}
                   targetCount={currentClass.stageThresholds[9]} // 毕业所需总食物
-                  badges={currentClass.badges[student.id] ?? EMPTY_BADGES}
+                  badges={studentBadges}
                   selectedPetId={petId}
                   petStage={petStage}
                   stageThresholds={currentClass.stageThresholds}

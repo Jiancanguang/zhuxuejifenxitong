@@ -20,7 +20,8 @@ interface Theme {
 interface StudentCardProps {
   name: string;
   studentId: string; // 学生ID，用于徽章定位
-  currentCount: number; // 累计食物数量
+  currentCount: number; // 当前宠物阶段进度（= 累计食物 − 已毕业次数 × 毕业阈值）
+  availablePoints: number; // 当前可用积分（= 累计食物 − 已消费食物）
   targetCount: number;  // 毕业所需总食物
   badges: Badge[];
   selectedPetId?: string; // 可能为undefined (蛋状态)
@@ -53,6 +54,7 @@ const StudentCardComponent: React.FC<StudentCardProps> = ({
   name,
   studentId,
   currentCount,
+  availablePoints,
   targetCount,
   badges,
   selectedPetId,
@@ -494,12 +496,12 @@ const StudentCardComponent: React.FC<StudentCardProps> = ({
 
           {/* Stats Footer */}
           <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 mt-3 pt-3 border-t border-slate-100/50">
-            <div className="flex items-center gap-1.5" title="累计喂食总数">
+            <div className="flex items-center gap-1.5" title="可用积分（累计获得 − 已消费）">
               <div className="w-5 h-5 rounded-full bg-orange-100 flex items-center justify-center text-xs">
                 🍖
               </div>
               <span className="text-xs font-bold text-slate-500">
-                {currentCount}
+                {availablePoints}
               </span>
             </div>
 
@@ -590,6 +592,7 @@ const areStudentCardPropsEqual = (prev: StudentCardProps, next: StudentCardProps
     prev.studentId === next.studentId
     && prev.name === next.name
     && prev.currentCount === next.currentCount
+    && prev.availablePoints === next.availablePoints
     && prev.targetCount === next.targetCount
     && prev.badges.length === next.badges.length
     && prev.selectedPetId === next.selectedPetId

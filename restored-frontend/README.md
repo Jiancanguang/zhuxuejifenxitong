@@ -1,11 +1,14 @@
 # 学生积分系统
 
-这是一个可独立部署的前后端项目：
+这是一个可独立部署的前后端同项目应用：
 
 - 前端：`React + Vite`
-- 后端：`Node.js + Express`
-- 数据库：`Postgres`，推荐 `Supabase`
-- 推荐部署：前端上 `Vercel`，后端上 `Render`
+- 后端：`Node.js + Express`（同进程托管前端 build 产物，默认端口 `3001`）
+- 数据库：`Postgres`
+
+> **当前生产环境**：腾讯云轻量应用服务器 + 宝塔面板 + PM2 + 本机 Postgres。详见 `docs/deploy-tencent-cloud.md`。
+>
+> 历史上的 Vercel/Render/Supabase 方案作为替代保留，但非当前线上使用。
 
 当前版本已经不再依赖原站 `https://bjcwy.cjgsup.com`。前端、API 和本地宠物图片资源都由当前项目自身提供。
 
@@ -14,8 +17,10 @@
 - `src/`: 前端源码
 - `server/`: Express API 与 Postgres 数据层
 - `public/动物图片/`: 本地宠物图片资源
-- `docs/deploy-render-vercel-supabase.md`: 推荐的线上部署文档
-- `docs/deploy-nginx.md`: 自建 Linux 服务器部署文档
+- `docs/deploy-tencent-cloud.md`: **当前生产使用的部署文档**（腾讯云 + 宝塔）
+- `docs/deploy-nginx.md`: 通用自建 Linux 服务器部署文档
+- `docs/deploy-render-vercel-supabase.md`: 替代方案（Vercel + Render + Supabase）
+- `docs/deploy-independent-backend.md`: 替代方案（独立部署后端）
 
 ## 本地开发
 
@@ -26,7 +31,7 @@ npm install
 cp .env.example .env
 ```
 
-把 `.env` 里的 `DATABASE_URL` 改成你的 Supabase 连接串后，运行：
+把 `.env` 里的 `DATABASE_URL` 改成你的 Postgres 连接串（本机或 Supabase 等）后，运行：
 
 ```bash
 npm run dev
@@ -51,23 +56,23 @@ npm run start
 - 前台：`http://localhost:3001`
 - 管理后台：`http://localhost:3001/admin/login`
 
-## 推荐部署方式
+## 部署方式
 
-如果你和当前工作室一样，平台用的是 `Supabase + Vercel`，推荐这样拆：
+### 当前生产：腾讯云 + 宝塔（推荐）
 
-- 前端：`Vercel`
-- 后端：`Render Web Service`
-- 数据库：`Supabase Postgres`
+实际线上就是这个方案。看：
 
-直接看：
-
-- `docs/deploy-render-vercel-supabase.md`
-
-如果你以后改成自己买 Linux 服务器，也可以看：
-
-- `docs/deploy-nginx.md`
+- `docs/deploy-tencent-cloud.md`
 - `deploy/nginx/class-pet-garden.conf.example`
 - `ecosystem.config.cjs`
+
+PM2 进程在服务器上叫 `class-pet-garden`（不是 `ecosystem.config.cjs` 默认的 `zhuxue-jifen`，沿用的是更早的命名）。
+
+### 替代方案：自建 Linux 服务器 / Vercel + Render + Supabase
+
+- `docs/deploy-nginx.md`（通用 Nginx 自建）
+- `docs/deploy-render-vercel-supabase.md`（Vercel + Render + Supabase）
+- `docs/deploy-independent-backend.md`（后端独立部署）
 
 ## 环境变量
 
@@ -114,6 +119,6 @@ npm run db:backup
 
 ## 说明
 
-- 当前默认以 `Supabase Postgres` 为目标数据库。
-- 后端仍然可以在本地或自建服务器运行，不要求一定上 `Render`。
+- 数据库对接任何标准 Postgres（当前生产用的是腾讯云上本机安装的 Postgres）。
+- 后端可在本地、腾讯云、自建服务器或 Render 等任意 Node 环境运行。
 - `proxy/` 目录保留为早期恢复阶段的遗留文件，当前部署不依赖它。

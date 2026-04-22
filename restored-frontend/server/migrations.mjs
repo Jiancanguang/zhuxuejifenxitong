@@ -235,6 +235,74 @@ const migrations = [
       `);
     },
   },
+  {
+    id: '007_recompute_pet_stage_after_graduation',
+    up: async (db) => {
+      // 早期版本会把 students.pet_stage 写成基于原始 food_count 的 stage，
+      // 没有扣除「已毕业次数 × 毕业阈值」。PR #18 起前端展示已改成按
+      // max(0, food_count − badges × thresholds[9]) 推导 stage，这个字段不再被读取，
+      // 但老数据里可能残留着错位的值（比如毕业重置后被置为 1，再加分又被改写成 10）。
+      // 这里按最新口径一次性重算一遍，保持数据库整洁。
+      const DEFAULT_THRESHOLDS = [0, 5, 10, 20, 30, 45, 60, 75, 90, 100];
+
+      const parseThresholds = (raw) => {
+        try {
+          const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          if (Array.isArray(parsed) && parsed.length >= 10) {
+            return parsed.slice(0, 10).map((item, index) => {
+              const numeric = Math.max(0, Math.floor(Number(item) || 0));
+              return index === 0 ? numeric : Math.max(numeric, 0);
+            });
+          }
+        } catch {
+          // fall through
+        }
+        return [...DEFAULT_THRESHOLDS];
+      };
+
+      const stageFromFood = (food, thresholds) => {
+        const clamped = Math.max(0, Math.floor(food || 0));
+        for (let i = thresholds.length - 1; i >= 0; i -= 1) {
+          if (clamped >= thresholds[i]) return i + 1;
+        }
+        return 1;
+      };
+
+      const rows = await db.prepare(`
+        SELECT
+          s.id AS id,
+          s.food_count AS food_count,
+          s.pet_stage AS pet_stage,
+          c.stage_thresholds AS stage_thresholds,
+          COALESCE(b.cnt, 0) AS badge_count
+        FROM students s
+        JOIN classes c ON c.id = s.class_id
+        LEFT JOIN (
+          SELECT student_id, COUNT(*)::int AS cnt
+          FROM badges
+          GROUP BY student_id
+        ) b ON b.student_id = s.id
+      `).all();
+
+      const updateStmt = db.prepare(`
+        UPDATE students SET pet_stage = ?, updated_at = ? WHERE id = ?
+      `);
+      const now = nowIso();
+
+      for (const row of rows) {
+        const thresholds = parseThresholds(row.stage_thresholds);
+        const graduationCost = thresholds[9] || 0;
+        const adjustedFood = Math.max(
+          0,
+          (row.food_count || 0) - (row.badge_count || 0) * graduationCost,
+        );
+        const correctStage = stageFromFood(adjustedFood, thresholds);
+        if (correctStage !== row.pet_stage) {
+          await updateStmt.run(correctStage, now, row.id);
+        }
+      }
+    },
+  },
 ];
 
 const ensureMigrationsTable = async (db) => {

@@ -19,10 +19,10 @@ ROOT = Path(os.environ.get("POINTS_RELEASE_ROOT", "/www/zhuxue-points")).resolve
 HEALTH = os.environ.get("POINTS_HEALTH_ORIGIN", "http://127.0.0.1:3001").rstrip("/")
 
 
-def run(*args, cwd=None, capture=False):
+def run(*args, cwd=None, capture=False, timeout=900):
     return subprocess.run(args, cwd=cwd, check=True, text=True,
                           stdout=subprocess.PIPE if capture else None,
-                          timeout=900).stdout
+                          timeout=timeout).stdout
 
 
 def atomic_json(target, value):
@@ -125,9 +125,29 @@ def main(mode):
         commit = state.get("previous_commit")
         target_link = state.get("previous_link")
     else:
-        run("git", "fetch", "origin", "main", cwd=SOURCE)
-        commit = run("git", "rev-parse", os.environ.get("POINTS_DEPLOY_COMMIT", "origin/main") + "^{commit}", cwd=SOURCE, capture=True).strip()
-        run("git", "merge-base", "--is-ancestor", commit, "origin/main", cwd=SOURCE)
+        pinned = os.environ.get("POINTS_DEPLOY_COMMIT")
+        if pinned and not re.fullmatch(r"[0-9a-f]{40}", pinned):
+            raise RuntimeError("POINTS_DEPLOY_COMMIT must be a full Git commit")
+        bundle_path = os.environ.get("POINTS_SOURCE_BUNDLE")
+        source_bundle_hash = None
+        if bundle_path:
+            # The operator verifies origin/main locally, then transports an
+            # exact commit bundle. Do not rewrite remote-tracking refs or HEAD.
+            bundle = Path(bundle_path).resolve()
+            source_bundle_hash = hashlib.sha256(bundle.read_bytes()).hexdigest()
+            if not pinned or source_bundle_hash != os.environ.get("POINTS_SOURCE_BUNDLE_SHA256"):
+                raise RuntimeError("Uploaded bundle needs its reviewed commit and SHA-256")
+            run("git", "bundle", "verify", str(bundle), cwd=SOURCE, timeout=60)
+            heads = run("git", "bundle", "list-heads", str(bundle), cwd=SOURCE, capture=True).splitlines()
+            ref = next((line.split()[1] for line in heads if line.split()[0] == pinned), None)
+            if not ref:
+                raise RuntimeError("Bundle does not contain the reviewed tip")
+            run("git", "fetch", str(bundle), ref, cwd=SOURCE, timeout=60)
+        else:
+            run("git", "fetch", "origin", "main", cwd=SOURCE, timeout=60)
+        commit = run("git", "rev-parse", "--verify", (pinned or "origin/main") + "^{commit}", cwd=SOURCE, capture=True).strip()
+        if not bundle_path:
+            run("git", "merge-base", "--is-ancestor", commit, "origin/main", cwd=SOURCE)
         # Never roll back another release accidentally. Legacy baseline uses the
         # checkout commit; its old dist is retained verbatim for runtime rollback.
         baseline = state.get("commit") or run("git", "rev-parse", "HEAD", cwd=SOURCE, capture=True).strip()
@@ -152,7 +172,7 @@ def main(mode):
         spec = {**old_spec, "cwd": str(release)}
         target_link = str(release)
         atomic_json(release / ".deploy-info.json", {"commit": commit, "built_at": stamp,
-                    "source": "git-archive", "working_tree_used": False})
+                    "source": "git-archive", "source_bundle_sha256": source_bundle_hash, "working_tree_used": False})
     journal = {"old_spec": old_spec, "old_link": old_link, "old_state": state}
     atomic_json(pending, journal)
     try:

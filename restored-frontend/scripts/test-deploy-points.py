@@ -157,5 +157,20 @@ elif sys.argv[1]!='save': raise SystemExit(4)
             result=subprocess.run(['python3',str(HERE/'deploy-points.py'),'--deploy'],capture_output=True)
             self.assertEqual(result.returncode,75)
 
+    def test_verified_bundle_and_rejection_of_wrong_hash(self):
+        import hashlib
+        tip=subprocess.check_output(['git','rev-parse','HEAD'],cwd=self.source,text=True).strip()
+        bundle=self.root/'source.bundle'
+        self.git('bundle','create',str(bundle),'main')
+        values={'POINTS_DEPLOY_COMMIT':tip,'POINTS_SOURCE_BUNDLE':str(bundle),'POINTS_SOURCE_BUNDLE_SHA256':'wrong'}
+        with patch.dict(os.environ,values):
+            with self.assertRaisesRegex(RuntimeError,'SHA-256'):self.module.main('--deploy')
+        self.assert_legacy()
+        values['POINTS_SOURCE_BUNDLE_SHA256']=hashlib.sha256(bundle.read_bytes()).hexdigest()
+        with patch.dict(os.environ,values):self.module.main('--deploy')
+        selected=json.loads(self.active.read_text())
+        info=json.loads((Path(selected['cwd'])/'.deploy-info.json').read_text())
+        self.assertEqual(info['source_bundle_sha256'],values['POINTS_SOURCE_BUNDLE_SHA256'])
+
 
 if __name__=='__main__': unittest.main(verbosity=2)

@@ -11,7 +11,7 @@
 ## 生产坐标
 
 - **服务器**：腾讯云 Lighthouse（OpenCloudOS），hostname 形如 `VM-0-16-opencloudos`
-- **项目路径**：`/www/zhuxuejifenxitong/restored-frontend`
+- **源码路径**：`/www/zhuxuejifenxitong`；运行路径改用`/www/zhuxue-points/releases/<版本>`，`current`记录当前发行（2026-10-18实现，待部署回读）
 - **Node 版本**：v22（via nvm）
 - **进程管理**：PM2
   - 进程名 `class-pet-garden`（id 通常为 `0`）—— 不是 `ecosystem.config.cjs` 里默认的 `zhuxue-jifen`
@@ -21,18 +21,16 @@
 - **数据库**：本机 PostgreSQL，通过 `.env` 的 `DATABASE_URL` 连接
 - **备份**：启用后自动写入 `backups/`，每 24 小时一份，保留 30 份
 
-## 更新代码的正确流程
+## 更新代码的正确流程（2026-10-18替代原地构建）
 
 ```bash
 ssh root@<服务器IP>
-cd /www/zhuxuejifenxitong/restored-frontend
-git fetch origin
-git checkout <target-branch>     # 或 git pull origin main（若无分叉）
-npm install                       # 通常没新依赖，但保险
-npm run build                     # 构建前端 dist/
-pm2 restart 0                     # 只重启 class-pet-garden，id=1 不要碰
-pm2 logs 0 --lines 30 --nostream  # 确认启动成功 + migration 是否执行
+bash /www/auto-deploy.sh --deploy
+# 显式回退上一发行：
+bash /www/auto-deploy.sh --rollback
 ```
+
+只手动执行，不再每5分钟拉代码。脚本从已提交Git版本独立归档、安装、构建，成功后切换且仅操作`class-pet-garden`；实际检查健康API、首页与入口JS/CSS内容，失败自动回退旧发行。源码工作区已有package-lock变化保留，不纳入构建。共享`.env`和`backups`通过链接沿用，PostgreSQL不随代码回退。不得在运行目录执行npm ci/build。完整边界见权威部署文档。
 
 ## 排障备忘
 

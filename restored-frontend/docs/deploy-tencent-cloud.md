@@ -1,5 +1,19 @@
 # 腾讯云轻量应用服务器部署指南
 
+## 当前生产更新规则（2026-10-18）
+
+以下“购买/首次安装”是初始化参考；已运行实例的更新统一走本节，禁止在运行目录安装依赖或构建。
+
+- 目标：仅积分系统`class-pet-garden`，服务器源码`/www/zhuxuejifenxitong`，发行`/www/zhuxue-points/releases`；端口3001。其它PM2应用不重启。
+- 触发：老师明确要求部署时执行`bash /www/auto-deploy.sh --deploy`；没有固定轮询、cron或模型调用，空闲0轮/天。需要绑定已审版本时传入`POINTS_DEPLOY_COMMIT=<完整提交>`。候选须为origin/main祖先且包含上次已发版本，拒绝陈旧覆盖。
+- 安装与构建：按Git提交归档到独立目录，先npm ci再构建；原网站目录、依赖和源码脏改动均不改。每个外部命令最多900秒，部署全程互斥，构建失败即结束，不重试、不切换。
+- 切换与验证：只更改积分PM2运行cwd，检查实际PM2选择、健康API、首页及入口JS/CSS字节一致性（最多40秒）；失败切回旧配置、实际核验旧页面后保存PM2状态。新旧发行均保留，不自动清理。
+- 共享数据：新发行链接原`restored-frontend/.env`与`backups`，账号/密钥不进Git归档或构建输入，PostgreSQL与备份不迁移。代码回退不回退数据库；本次仅改发布程序，无新增迁移。
+- 恢复：`bash /www/auto-deploy.sh --rollback`显式回退上一发行。切换前保存仅含进程路径/普通运行参数的恢复日志；若发布进程被强制中断，下次显式调用先恢复旧发行。健康检查失败且回退也失败时保留日志并报错，不无限重启。
+- 生命周期/开销：这是一次性手动发布入口，结束即退出，无常驻检查。安装/构建时间、网络与资源属于部署轮次，与平时网站业务和每日数据备份分开统计。失败发行保留用于排障，后续清理由老师确认具体范围。
+
+本次实现状态：待部署与双审回读。隔离测试使用真实Git归档/HTTP/文件系统，npm及PM2替换为测试入口；覆盖构建失败、启动失败、健康失败回退、成功切换/手动回退、进程中断恢复和互斥，生产故障不会主动注入。
+
 ## 一、购买服务器
 
 1. 打开 [腾讯云轻量应用服务器](https://cloud.tencent.com/product/lighthouse)
@@ -173,12 +187,10 @@ pm2 logs zhuxue-jifen --err
 
 ### 更新代码
 ```bash
-cd /www/zhuxuejifenxitong/restored-frontend
-git pull
-npm install
-npm run build
-pm2 restart zhuxue-jifen
+bash /www/auto-deploy.sh --deploy
 ```
+
+失败恢复与显式回退见本文“当前生产更新规则”；原地构建流程已废弃。
 
 ### 数据库备份
 系统内置了自动备份功能，备份文件在 `backups/` 目录。

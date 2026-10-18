@@ -15,7 +15,7 @@
 - 当前部署器仅支持已确认的`npm start`生产入口，拒绝未知的旧目录绝对脚本入口。验证须同时核对PM2状态、PID、cwd、脚本与参数；验证中收到SIGTERM立即中止并走回退，不吞作普通HTTP失败。`current`回退目标取上一版实际PM2 cwd，避免手改指针与实际进程不一致。
 - 生命周期/开销：这是一次性手动发布入口，结束即退出，无常驻检查。安装/构建时间、网络与资源属于部署轮次，与平时网站业务和每日数据备份分开统计。失败发行保留用于排障，后续清理由老师确认具体范围。
 
-本次实现状态：待部署与双审回读。隔离测试使用真实Git归档/HTTP/文件系统，npm及PM2替换为测试入口；覆盖构建失败、启动失败、健康失败回退、成功切换/手动回退、进程中断恢复和互斥，生产故障不会主动注入。
+本次应用与发布程序已分别部署/安装并回读，补修复审中；见[实际回读](2026-10-18-safe-release-readback.md)。隔离测试使用真实Git归档/HTTP/文件系统，npm及PM2替换为测试入口；覆盖构建失败、启动失败、健康失败回退、成功切换/手动回退、进程中断恢复和互斥，生产故障不会主动注入。
 
 ## 一、购买服务器
 
@@ -182,10 +182,10 @@ curl http://127.0.0.1:3001/api/health
 ### 查看日志
 ```bash
 # 查看应用日志
-pm2 logs zhuxue-jifen
+pm2 logs class-pet-garden
 
 # 查看错误日志
-pm2 logs zhuxue-jifen --err
+pm2 logs class-pet-garden --err
 ```
 
 ### 更新代码
@@ -201,7 +201,7 @@ bash /www/auto-deploy.sh --deploy
 
 ### 重启服务
 ```bash
-pm2 restart zhuxue-jifen
+pm2 restart class-pet-garden
 ```
 
 ## 常见问题

@@ -11,12 +11,12 @@
 ## 生产坐标
 
 - **服务器**：腾讯云 Lighthouse（OpenCloudOS），hostname 形如 `VM-0-16-opencloudos`
-- **源码路径**：`/www/zhuxuejifenxitong`；运行路径改用`/www/zhuxue-points/releases/<版本>`，`current`记录当前发行（2026-10-18实现，待部署回读）
+- **源码路径**：`/www/zhuxuejifenxitong`；运行路径`/www/zhuxue-points/releases/<版本>`，`current`记录当前发行（2026-10-18已部署回读；应用与发布器身份分别见`restored-frontend/docs/2026-10-18-safe-release-readback.md`）
 - **Node 版本**：v22（via nvm）
 - **进程管理**：PM2
   - 进程名 `class-pet-garden`（id 通常为 `0`）—— 不是 `ecosystem.config.cjs` 里默认的 `zhuxue-jifen`
   - 同机还有另一个 PM2 进程 `student-tracking`（id 通常为 `1`），**属于另一套无关项目，不要动**
-- **Express 监听端口**：`3001`，由 Nginx 反代到 `80/443`
+- **Express 监听端口**：`3001`，当前Caddy将`jifen.zhuxue.work`反代到该端口
 - **前端托管方式**：`npm run build` 产出 `dist/` 后由同一个 Express 进程静态托管，**不是前后端分拆部署**
 - **数据库**：本机 PostgreSQL，通过 `.env` 的 `DATABASE_URL` 连接
 - **备份**：启用后自动写入 `backups/`，每 24 小时一份，保留 30 份

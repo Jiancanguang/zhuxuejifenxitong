@@ -46,13 +46,29 @@ def link_current(target):
     os.replace(tmp, link)
 
 
-def existing_spec():
+def pm2_app():
     apps = json.loads(run("pm2", "jlist", capture=True))
-    app = next(p for p in apps if p["name"] == APP)
+    app = next((p for p in apps if p["name"] == APP), None)
+    if app is None:
+        raise RuntimeError(f"{APP} is not registered in PM2")
+    return app
+
+
+def existing_spec():
+    app = pm2_app()
     env = app["pm2_env"]
     return {"name": APP, "cwd": env["pm_cwd"], "script": env["pm_exec_path"],
             "args": env.get("args", []), "interpreter": env.get("exec_interpreter", "node"),
             "env": {"NODE_ENV": env.get("NODE_ENV", "production"), "PORT": env.get("PORT", 3001)}}
+
+
+def assert_running_spec(spec):
+    app = pm2_app()
+    env = app["pm2_env"]
+    if env.get("status") != "online" or not app.get("pid"):
+        raise RuntimeError(f"{APP} is not online with a live PID")
+    if env["pm_cwd"] != spec["cwd"] or env["pm_exec_path"] != spec["script"] or env.get("args", []) != spec["args"]:
+        raise RuntimeError("PM2 did not select the requested release and entrypoint")
 
 
 def activate(spec):
@@ -77,8 +93,7 @@ def verify(spec):
     end = time.monotonic() + 40
     while True:
         try:
-            if existing_spec()["cwd"] != spec["cwd"]:
-                raise RuntimeError("PM2 did not select the requested release")
+            assert_running_spec(spec)
             result = json.loads(get(HEALTH + "/api/health"))
             if result.get("success") is not True or result.get("data", {}).get("ok") is not True:
                 raise RuntimeError("Unexpected health response")
@@ -94,6 +109,8 @@ def verify(spec):
                 if hashlib.sha256(get(HEALTH + asset)).digest() != hashlib.sha256(disk.read_bytes()).digest():
                     raise RuntimeError("Served entry asset mismatch")
             return
+        except InterruptedError:
+            raise
         except Exception:
             if time.monotonic() >= end:
                 raise
@@ -121,6 +138,8 @@ def main(mode):
         pending.unlink()
         print("Recovered interrupted points switch")
     old_spec = existing_spec()
+    if Path(old_spec["script"]).name not in ("npm", "npm-cli.js") or old_spec["args"] != ["start"]:
+        raise RuntimeError("This deployment entry supports the production npm start app only")
     old_link = str((ROOT / "current").resolve()) if (ROOT / "current").is_symlink() else None
     state = json.loads(state_path.read_text()) if state_path.exists() else {}
     if mode == "--rollback":
@@ -128,7 +147,7 @@ def main(mode):
             raise RuntimeError("No previous release recorded")
         spec = state["previous_spec"]
         commit = state.get("previous_commit")
-        target_link = state.get("previous_link")
+        target_link = spec["cwd"]
     else:
         pinned = os.environ.get("POINTS_DEPLOY_COMMIT")
         if pinned and not re.fullmatch(r"[0-9a-f]{40}", pinned):
@@ -185,8 +204,11 @@ def main(mode):
         activate(spec)
         verify(spec)
         run("pm2", "save")
-        atomic_json(state_path, {"commit": commit, "spec": spec, "previous_spec": old_spec,
-                    "previous_link": old_link, "previous_commit": state.get("commit"),
+        atomic_json(state_path, {"commit": commit, "spec": spec,
+                    "previous_spec": old_spec if mode != "--rollback" else None,
+                    "previous_link": old_link if mode != "--rollback" else None,
+                    "previous_commit": state.get("commit") if mode != "--rollback" else None,
+                    "rolled_back_from": state.get("commit") if mode == "--rollback" else None,
                     "verified_at": datetime.now(timezone.utc).isoformat()})
         pending.unlink()
     except BaseException:

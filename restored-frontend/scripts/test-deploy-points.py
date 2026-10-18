@@ -63,7 +63,7 @@ from pathlib import Path
 state=Path(os.environ['FAKE_PM2_STATE'])
 if sys.argv[1]=='jlist':
  s=json.loads(state.read_text())
- print(json.dumps([] if s.get('deleted') else [{'name':'class-pet-garden','pm2_env':{'pm_cwd':s['cwd'],'pm_exec_path':s['script'],'args':s['args'],'exec_interpreter':s['interpreter'],**s['env']}}]))
+ print(json.dumps([] if s.get('deleted') else [{'name':'class-pet-garden','pid':s.get('fake_pid',1234),'pm2_env':{'status':s.get('fake_status','online'),'pm_cwd':s['cwd'],'pm_exec_path':s['script'],'args':s['args'],'exec_interpreter':s['interpreter'],**s['env']}}]))
 elif sys.argv[1]=='delete':
  assert sys.argv[2]=='class-pet-garden'
  s=json.loads(state.read_text());s['deleted']=True;state.write_text(json.dumps(s))
@@ -142,6 +142,30 @@ elif sys.argv[1]!='save': raise SystemExit(4)
         self.assertEqual((self.live/'dist/index.html').read_bytes(),self.old_page)
         self.module.main('--rollback')
         self.assert_legacy()
+        self.assertEqual((self.module.ROOT/'current').resolve(),self.live.resolve(),'legacy rollback must retain a valid current link')
+        with self.assertRaisesRegex(RuntimeError,'No previous release'):
+            self.module.main('--rollback')
+        self.assert_legacy()
+
+    def test_missing_pm2_app_has_a_diagnostic_error(self):
+        self.active.write_text(json.dumps({**self.spec,'deleted':True}))
+        with self.assertRaisesRegex(RuntimeError,'class-pet-garden is not registered'):
+            self.module.existing_spec()
+
+    def test_verify_rejects_bad_process_identity_and_propagates_stop(self):
+        self.active.write_text(json.dumps({**self.spec,'fake_status':'errored'}))
+        with self.assertRaisesRegex(RuntimeError,'not online'):
+            self.module.assert_running_spec(self.spec)
+        self.active.write_text(json.dumps({**self.spec,'script':'/old/server.mjs'}))
+        with self.assertRaisesRegex(RuntimeError,'entrypoint'):
+            self.module.assert_running_spec(self.spec)
+        with self.assertRaisesRegex(RuntimeError,'npm start'):
+            self.module.main('--deploy')
+        self.active.write_text(json.dumps(self.spec))
+        with patch.object(self.module,'get',side_effect=InterruptedError('stop requested')) as get:
+            with self.assertRaisesRegex(InterruptedError,'stop requested'):
+                self.module.verify(self.spec)
+            self.assertEqual(get.call_count,1,'SIGTERM must propagate rather than being retried as a health failure')
 
     def test_interrupted_switch_recovered_before_next_action(self):
         self.module.ROOT.mkdir()

@@ -63,8 +63,11 @@ from pathlib import Path
 state=Path(os.environ['FAKE_PM2_STATE'])
 if sys.argv[1]=='jlist':
  s=json.loads(state.read_text())
- print(json.dumps([{'name':'class-pet-garden','pm2_env':{'pm_cwd':s['cwd'],'pm_exec_path':s['script'],'args':s['args'],'exec_interpreter':s['interpreter'],**s['env']}}]))
-elif sys.argv[1]=='startOrReload':
+ print(json.dumps([] if s.get('deleted') else [{'name':'class-pet-garden','pm2_env':{'pm_cwd':s['cwd'],'pm_exec_path':s['script'],'args':s['args'],'exec_interpreter':s['interpreter'],**s['env']}}]))
+elif sys.argv[1]=='delete':
+ assert sys.argv[2]=='class-pet-garden'
+ s=json.loads(state.read_text());s['deleted']=True;state.write_text(json.dumps(s))
+elif sys.argv[1]=='start':
  assert sys.argv[sys.argv.index('--only')+1]=='class-pet-garden'
  s=json.loads(Path(sys.argv[2]).read_text())['apps'][0]
  if os.environ.get('FAKE_START_FAIL') and '/releases/' in s['cwd']: raise SystemExit(3)
@@ -79,6 +82,7 @@ elif sys.argv[1]!='save': raise SystemExit(4)
                     content=b'{"success":true,"data":{"ok":true}}'
                 else:
                     spec=json.loads(active.read_text())
+                    if spec.get('deleted'):self.send_error(503);return
                     p=Path(spec['cwd'])/'dist'/('index.html' if self.path=='/' else self.path.lstrip('/'))
                     if not p.exists(): self.send_error(404); return
                     content=p.read_bytes()

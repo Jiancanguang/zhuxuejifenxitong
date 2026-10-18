@@ -58,7 +58,12 @@ def existing_spec():
 def activate(spec):
     config = ROOT / "active.ecosystem.json"
     atomic_json(config, {"apps": [spec]})
-    run("pm2", "startOrReload", str(config), "--only", APP, "--update-env")
+    # PM2 reload retains pm_cwd for an existing process even when JSON changes.
+    # Recreate this named app only; never delete/restart the whole process list.
+    apps = json.loads(run("pm2", "jlist", capture=True))
+    if any(app["name"] == APP for app in apps):
+        run("pm2", "delete", APP)
+    run("pm2", "start", str(config), "--only", APP, "--update-env")
 
 
 def get(url):
